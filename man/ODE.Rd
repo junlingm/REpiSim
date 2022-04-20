@@ -13,14 +13,6 @@ A R6 class for numerically solving the ODE models
 ODE is a subclass of `Simulator`. This class is only available if the `deSolve` 
 package is installed.
 
-The `model` argument must provide an `equations` field that
-is a list containing the following fields
-\itemize{
-  \item equations: a list of ODE equations
-  \item substitutions: an optional named list of substitutions for the
-        parameters of the ODE.
-} 
-
 the method repetitively call the simulate method to solve
 the system using the given `time`, `y0`, and `parms`. The 2-norm of the
 difference between y0 and the final state is calculated. If it is less then 
@@ -85,7 +77,8 @@ constructor
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model}}{the model to simulate.}
+\item{\code{model}}{the model to simulate. It must be an object of a subclass
+of `Model`.}
 }
 \if{html}{\out{</div>}}
 }
