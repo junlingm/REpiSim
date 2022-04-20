@@ -1,0 +1,21 @@
+Package: REpiSim
+Type: Package
+Title: Mathematical Epidemiological Model Simulations in R
+Version: 0.1.0
+Author: Junling Ma <junling@uvic.ca>
+Maintainer: Junling Ma <junling@uvic.ca>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: LGPL v3.0
+Encoding: UTF-8
+LazyData: true
+Depends: 
+  R6
+Suggests:
+  deSolve
+Collate:
+  Model.R
+  TexFormatter.R
+  Simulator.R
+  ODE.R
+RoxygenNote: 7.1.2
