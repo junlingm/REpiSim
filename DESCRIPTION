@@ -19,4 +19,6 @@ Collate:
   Simulator.R
   ODE.R
   Compartmental.R
+  RGillespie.R
+  CGillespie.R
 RoxygenNote: 7.1.2
