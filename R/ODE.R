@@ -4,7 +4,7 @@
 #' package is installed.
 #' @name ODE
 #' @docType class
-#' @exportClass ODE
+#' @export
 ODE = R6Class(
   "ODE",
   inherit = Simulator,

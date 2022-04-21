@@ -10,8 +10,8 @@
 #' they can also be used for stochastic simulations (such as the Gillespie
 #' method).
 #' 
-#' #' @docType class
-#' @exportClass Compartmental
+#' @docType class
+#' @export
 Compartmental <- R6Class(
   "Compartmental",
   inherit = Model,

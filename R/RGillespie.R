@@ -4,7 +4,6 @@
 #' to simulate a compartmental model.
 #' 
 #' @docType class
-#' @exportClass RGillespie
 #' @examples
 #' # an SIR model
 #' SIR = Compartmental$new(S, I, R, title="SIR")
@@ -12,6 +11,7 @@
 #' SIR$transition(I->R ~ gamma*I, name="recovery")
 #' g = RGillespie$new(SIR)
 #' g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
+#' @export
 RGillespie = R6Class(
   "RGillespie",
   inherit = Simulator,

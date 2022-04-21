@@ -21,7 +21,7 @@ merge.list = function(a, b) {
 #' R6 class to typeset R expressions as latex equations
 #' 
 #' @docType class
-#' @exportClass TexFormatter
+#' @export
 TexFormatter = R6Class(
   "TexFormatter",
   private = list(

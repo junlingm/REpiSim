@@ -5,7 +5,6 @@
 #' if the `cpp11` package is installed.
 #' 
 #' @docType class
-#' @exportClass CGillespie
 #' @examples
 #' # an SIR model
 #' SIR = Compartmental$new(S, I, R, title="SIR")
@@ -13,6 +12,7 @@
 #' SIR$transition(I->R ~ gamma*I, name="recovery")
 #' g = CGillespie$new(SIR)
 #' g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
+#' @export
 CGillespie = R6Class(
   "CGillespie",
   inherit = Simulator,

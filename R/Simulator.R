@@ -2,7 +2,7 @@
 #' 
 #' The main method is `simulate`.
 #' @docType class
-#' @exportClass Simulator
+#' @export
 Simulator = R6Class(
   "Simulator",
   private = list(

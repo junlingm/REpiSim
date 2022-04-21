@@ -20,7 +20,7 @@ valid.functions = c(
 #' or be formatted as latex equations.
 #' 
 #' @docType class
-#' @exportClass Model
+#' @export
 Model <- R6Class(
   "Model",
   private = list(
