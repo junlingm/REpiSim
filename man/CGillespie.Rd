@@ -21,6 +21,14 @@ This is a subclass of Simulator, implementing the Gillespie method
 to simulate a compartmental model using cpp11. This class is only available
 if the `cpp11` package is installed.
 }
+\examples{
+# an SIR model
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
+SIR$transition(I->R ~ gamma*I, name="recovery")
+g = CGillespie$new(SIR)
+g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
+}
 \section{Super class}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{CGillespie}
 }

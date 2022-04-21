@@ -152,8 +152,8 @@ Compartmental <- R6Class(
     #' to read the model from
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-    #' SIR$transition(S->I ~ beta*S*I/N, name="infection")
+    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
     initialize = function(..., title = "", file = NULL) {
@@ -175,10 +175,10 @@ Compartmental <- R6Class(
     #' @examples 
     #' # an SIR model
     #' SIR = Compartmental$new(title="SIR")
-    #' SIR$compartment("S")$compartment("I")$compartment(R)$
-    #'   where(N=S+I+R)
+    #' SIR$compartment("S")$compartment("I")$compartment(R)
     #' SIR$transition(S->I ~ beta*S*I/N, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
+    #' SIR$where(N=S+I+R)
     #' print(SIR)
     compartment = function(name) {
       if (length(name) == 0) {
@@ -201,8 +201,8 @@ Compartmental <- R6Class(
     #' is automatically removed.
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-    #' SIR$transition(S->I ~ beta*S*I/N, name="infection")
+    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
     delete = function(name) {
@@ -253,8 +253,8 @@ Compartmental <- R6Class(
     #' 
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-    #' SIR$transition(S->I ~ beta*S*I/N, name="infection")
+    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
     #' # the following command changes the "vaccination" transition
@@ -416,7 +416,7 @@ Compartmental <- R6Class(
 
 if (exists("TEST") && is.logical(TEST) && TEST) {
   m = Compartmental$new(title="SIR", S, I, R)
-  m$transition(I<-S ~ beta*S*I/N)
+  m$transition(I<-S ~ beta*S*I/N, N=S+I+R)
   m$transition(R<-I ~ gamma, percapita = TRUE)
   m$where(N=S+I+R)
   print(m)

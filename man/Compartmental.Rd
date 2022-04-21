@@ -49,8 +49,8 @@ If the transition with the given name exists, then the transition is changed.
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
 
@@ -60,10 +60,10 @@ print(SIR)
 
 # an SIR model
 SIR = Compartmental$new(title="SIR")
-SIR$compartment("S")$compartment("I")$compartment(R)$
-  where(N=S+I+R)
+SIR$compartment("S")$compartment("I")$compartment(R)
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
+SIR$where(N=S+I+R)
 print(SIR)
 
 ## ------------------------------------------------
@@ -71,8 +71,8 @@ print(SIR)
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
 
@@ -81,8 +81,8 @@ print(SIR)
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
 # the following command changes the "vaccination" transition
@@ -153,8 +153,8 @@ to read the model from}
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
 }
@@ -186,10 +186,10 @@ an invisible self for chaining methods
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
 SIR = Compartmental$new(title="SIR")
-SIR$compartment("S")$compartment("I")$compartment(R)$
-  where(N=S+I+R)
+SIR$compartment("S")$compartment("I")$compartment(R)
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
+SIR$where(N=S+I+R)
 print(SIR)
 }
 \if{html}{\out{</div>}}
@@ -220,8 +220,8 @@ an invisible self for chaining methods
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
 }
@@ -276,8 +276,8 @@ the name of the transition
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
-SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR = Compartmental$new(S, I, R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
 # the following command changes the "vaccination" transition
