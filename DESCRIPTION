@@ -12,7 +12,8 @@ LazyData: true
 Depends: 
   R6
 Suggests:
-  deSolve
+  deSolve,
+  cpp11
 Collate:
   Model.R
   TexFormatter.R
