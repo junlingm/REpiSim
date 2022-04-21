@@ -11,6 +11,8 @@ Encoding: UTF-8
 LazyData: true
 Depends: 
   R6
+Imports:
+  tools
 Suggests:
   deSolve,
   cpp11
@@ -22,4 +24,5 @@ Collate:
   Compartmental.R
   RGillespie.R
   CGillespie.R
+  flowchart.R
 RoxygenNote: 7.1.2
