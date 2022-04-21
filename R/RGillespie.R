@@ -5,6 +5,7 @@
 #' 
 #' @docType class
 #' @exportClass RGillespie
+#' @examples
 #' # an SIR model
 #' SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
 #' SIR$transition(S->I ~ beta*S*I/N, name="infection")

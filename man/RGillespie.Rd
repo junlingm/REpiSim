@@ -18,6 +18,14 @@ R6 class implementing the Gillespie method in R
 This is a subclass of Simulator, using an R implementation of the Gillespie method
 to simulate a compartmental model.
 }
+\examples{
+# an SIR model
+SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
+SIR$transition(S->I ~ beta*S*I/N, name="infection")
+SIR$transition(I->R ~ gamma*I, name="recovery")
+g = RGillespie$new(SIR)
+g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
+}
 \section{Super class}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{RGillespie}
 }
