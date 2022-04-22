@@ -166,7 +166,7 @@ Compartmental <- R6Class(
           file = e$model
           if (is.null(file)) 
             stop("not a valid model file: ", file)
-          title = if (is.null(e$title)) e$title else tile
+          title = if (is.null(e$title)) e$title else title
         }
         self$title = title  
         if (is.null(file$compartments) || !is.character(file$compartments) ||
