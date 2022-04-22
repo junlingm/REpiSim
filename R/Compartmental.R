@@ -157,14 +157,38 @@ Compartmental <- R6Class(
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
     initialize = function(..., title = "", file = NULL) {
-      self$title = title
-      args = as.list(substitute(list(...)))[-1]
-      ns = names(args)
-      if (length(args) > 0) {
-        for (i in 1:length(args)) {
-          if (!is.null(ns) && ns[i] != "") {
-            self$where(pairs=args[i])
-          } else self$compartment(args[[i]])
+      if (!is.null(file)) {
+        if (is.character(file)) {
+          if (!file.exists(file))
+            stop("file does not exist: ", file)
+          e = new.env()
+          load(file, envir=e)
+          file = e$model
+          if (is.null(file)) 
+            stop("not a valid model file: ", file)
+          title = if (is.null(e$title)) e$title else tile
+        }
+        self$title = title  
+        if (is.null(file$compartments) || !is.character(file$compartments) ||
+            any(file$compartments == ""))
+          stop("invalid model file")
+        sapply(file$compartments, self$compartment)
+        if (!is.null(file$transitions) && !is.list(file$transition))
+          stop("invalid model file")
+        sapply(file$transitions, function(tr) do.call(self$transition, tr))
+        if (!is.null(file$substitutions) && !is.list(file$substitutions))
+          stop("invalid model file")
+        do.call(self$where, file$substitutions)
+      } else {
+        self$title = title
+        args = as.list(substitute(list(...)))[-1]
+        ns = names(args)
+        if (length(args) > 0) {
+          for (i in 1:length(args)) {
+            if (!is.null(ns) && ns[i] != "") {
+              self$where(pairs=args[i])
+            } else self$compartment(args[[i]])
+          }
         }
       }
     },
