@@ -28,7 +28,10 @@ Model <- R6Class(
     .parameters = list(),
     .where = list(),
     .formula = list(),
+    # whether the compartment field of a substitution need to be recalculated
+    recalc.compartment = FALSE,
     
+
     # this function returns an alist with a given number n of arguments
     make.alist = function(n) {
       if (n == 0) NULL else {
@@ -158,6 +161,7 @@ Model <- R6Class(
         private$.compartments[[to]]$name = to
         private$.compartments[[to]]$value = formula.to
         private$.compartments[[from]] = NULL
+        private$recalc.compartment = length(private$.where) > 0
       } else if (!is.null(private$.where[[from]])) {
         formula.from = from
         formula.to = to
@@ -166,6 +170,7 @@ Model <- R6Class(
         private$.where[[to]]$value = to
         private$.where[[from]] = NULL
         change.formula = TRUE
+        private$recalc.compartment = length(private$.where) > 0
       } else if (!is.null(private$.parameters[[from]])) {
         formula.from = NULL
         private$.parameters[[to]] = private$.parameters[[from]]
@@ -199,6 +204,23 @@ Model <- R6Class(
           p
         }
       )
+    },
+    
+    # calculate if the substitution s depends on a compartment
+    calc.compartment = function(s) {
+      f = private$.formula[[s$value]]
+      for (d in f$depend) {
+        if (!is.null(private$.compartments[[d]])) 
+          return (TRUE)
+        w = private$.where[[d]]
+        if (!is.null(w)) {
+          if (is.null(w$compartment))
+            private$.where[[d]]$compartment = private$calc.compartment(w)
+          if (private$.where[[d]]$compartment) return (TRUE)
+        }
+      }
+      s$compartment = FALSE
+      s
     }
   ),
 
@@ -278,6 +300,7 @@ Model <- R6Class(
           private$.parameters[[name]] = NULL
         }
       }
+      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
     
@@ -318,13 +341,7 @@ Model <- R6Class(
              if (length(u) - length(ns) > 1) "s " else " ",
              paste(unique(setdiff(ns, u)), collapse=", ")
         )
-      missing = Filter(function(x) is.null(private$.parameters[[x]]), u)
-      if (length(missing) > 0)
-        stop(paste(missing, collapse=", "),
-             if (length(missing) > 1) " are not parameters" else
-               " is not a parameter"
-        )
-      
+
       compartments = self$compartments
       redef = ns[ns %in% compartments]
       if (length(redef) > 0)
@@ -346,6 +363,7 @@ Model <- R6Class(
           private$.parameters[[name]] = NULL
         }
       }
+      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
 
@@ -399,6 +417,7 @@ Model <- R6Class(
           f
         }
       )
+      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
 
@@ -508,10 +527,20 @@ Model <- R6Class(
     substitutions = function() {
       l = list()
       compartments = self$compartments
+      if (private$recalc.compartment) {
+        private$.where = lapply(private$.where, function(w) {
+          w$compartment = NULL
+          w
+        })
+        private$.where = lapply(private$.where, function(w) {
+          w$compartment = private$calc.compartment(w)
+          w
+        })
+        private$recalc.compartment = FALSE
+      }
       for (w in private$.where) {
-        f = private$.formula[[w$value]]
-        l[[w$name]] = f$formula
-        if (any(f$depend %in% compartments))
+        if (!is.null(w$compartment))
+          l[[w$name]] = private$.formula[[w$value]]$formula
           attr(l[[w$name]], "compartment") = TRUE
       }
       l
