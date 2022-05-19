@@ -9,25 +9,15 @@ ODE = R6Class(
   "ODE",
   inherit = Simulator,
   private = list(
-    # 
-    format.var = function(S, name) {
-      lapply(S, function(var) {
-        call("<-", as.name(var), call("[[", as.name(name), which(var == S)))
-      })
-    },
-    
     build = function(model) {
       l = alist()
       v = list()
       system = model$equations
-      eq = lapply(system$equation, private$format.equation)
-      der = lapply(names(eq), function(var) as.name(paste0(".d.", var)))
+      der = lapply(names(system$equations$equations), function(var) as.name(paste0(".d.", var)))
       l = c(
         as.name("{"),
-        private$format.var(model$compartments, "y"),
-        private$format.var(model$parameters, "parms"),
-        lapply(system$where, private$format.equation),
-        eq,
+        private$format.substitution(system$where),
+        lapply(system$equation, private$format.equation),
         call("list", as.call(c(list(as.name("c")), der)))
       )
       as.function(c(alist(t=, y=, parms=), as.call(l)))

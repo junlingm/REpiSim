@@ -38,6 +38,23 @@ Simulator = R6Class(
       call("<-", var, eq[[3]])
     },
     
+    # create a list of R assignment calls to convert the components of
+    # a vector (given by name) into variables with the same name.
+    format.var = function(S, name) {
+      lapply(S, function(var) {
+        call("<-", as.name(var), call("[[", as.name(name), which(var == S)))
+      })
+    },
+
+    # create a list of R assignment calls to calculate the substitutions
+    format.substitution = function(S) {
+      c(
+        private$format.var(private$compartments, "y"),
+        private$format.var(private$parameters, "parms"),
+        lapply(S, private$format.equation)
+      )
+    },
+    
     # This private method actually performs the simulation
     run = function(t, y0, parms, ...) {
       NULL
@@ -61,7 +78,6 @@ Simulator = R6Class(
     initialize = function(model) {
       private$compartments = model$compartments
       private$parameters = model$parameters
-      private$.model = private$build(model)
       subst = model$substitutions
       private$alias = list()
       for (n in names(subst)) {
@@ -70,6 +86,7 @@ Simulator = R6Class(
         if (!is.null(attr(s, "compartment")))
           attr(private$alias[[n]], "compartment") = TRUE
       }
+      private$.model = private$build(model)
       col = list(quote(c), quote(row))
       for (n in names(private$alias)) {
         if (!is.null(attr(private$alias[[n]], "compartment")))
@@ -87,14 +104,14 @@ Simulator = R6Class(
     #' @param t a numeric vector of times.
     #' @param y0 a numeric vector of initial conditions.
     #' @param parms a numeric vector of parameter values.
-    #' @param alias a logical value. If TRUE, the values of the 
+    #' @param vars a character vector specifying the variable names to be returned. 
+    #' A variable can be either a compartment or a substitution
     #' @param ... extra arguments to be passed to the `ode` method
     #' substitutions that depend on the compartments are calculated 
     #' and returned
     #' @return a data frame which rows correspond to each time in `t`, 
-    #' and columns correspond to the value of each compartment (or
-    #' substitution if alias=TRUE).
-    simulate = function(t, y0, parms=NULL, alias=TRUE, ...) {
+    #' and columns correspond to the variables specified in vars.
+    simulate = function(t, y0, parms=NULL, vars=names(y0), ...) {
       ny = names(y0)
       if (is.null(ny) || any (ny == ""))
         stop("y0 must be named")
@@ -115,7 +132,9 @@ Simulator = R6Class(
       extra = setdiff(private$parameters, np)
       if (length(extra) > 0)
         stop("extra parameter values for ", extra)
-      private$.simulate(t, y0, parms, alias, ...)
+      alias = any(vars %in% names(private$alias))
+      data = private$.simulate(t, y0, parms, alias, ...)
+      data[, c("time", vars)]
     }
   ),
   
