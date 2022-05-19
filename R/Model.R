@@ -10,6 +10,9 @@ valid.functions = c(
   "sqrt", "abs", "ceiling", "floor", "trunc"
 )
 
+letter.label = function(n) {
+  paste0("(", letters[n], ")")
+}
 #' R6 class representing a mathematical model.
 #' 
 #' A mathematical model is described by a system of ODEs. The state variables
