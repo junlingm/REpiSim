@@ -13,7 +13,7 @@ ODE = R6Class(
       l = alist()
       v = list()
       system = model$equations
-      der = lapply(names(system$equations$equations), function(var) as.name(paste0(".d.", var)))
+      der = lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
       l = c(
         as.name("{"),
         private$format.substitution(system$where),
