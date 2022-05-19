@@ -309,12 +309,12 @@ TexFormatter = R6Class(
 
     #' @description a text representation of the class
     format = function() {
-      l = c("a tex typesetter for R expressions")
-      for (s in names(self$symbols)) {
-        cat(s, self$symbols[[s]], "\n")
-        l = c(l, paste0("  ", s, ": ", self$symbols[[s]]))
-      }
-      paste(l, collapse="\n")
+      paste(c(
+        "a tex typesetter for R expressions",
+        lapply(names(self$symbols), function(s) {
+          paste0("  ", s, ": ", self$symbols[[s]])
+        })
+      ), collapse="\n")
     }
   )
 )
