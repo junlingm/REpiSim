@@ -228,15 +228,10 @@ Model <- R6Class(
   ),
 
   public = list(
-    #' @field title The name of the model.
-    title = "",
-
     #' @description constructor
     #' 
-    #' It constructs a Model object with a given title, compartments, 
-    #' and substitutions.
+    #' It constructs a Model object with compartments and substitutions.
     #' 
-    #' @param title The name of the model
     #' @param ... Each extra parameter is either passed to the `compartment` method
     #' if it is a formula with the form `name ~ value`, or passed to the
     #' `where` methods to define a substitution if it is a named expression.
@@ -244,15 +239,13 @@ Model <- R6Class(
     #' @examples
     #' # An SIR model 
     #' SIR = Model$new(
-    #'   title = "SIR",
     #'   S ~ -beta*S*I/N, # the dS/dt equation
     #'   I ~ beta*S*I/N - gamma*I, # the dI/dt equation
     #'   R ~ gamma*I, # the dR/dt equation
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., title = "") {
-      self$title = title
+    initialize = function(...) {
       args = as.list(substitute(list(...)))[-1]
       ns = names(args)
       if (length(args) > 0) {
@@ -277,7 +270,7 @@ Model <- R6Class(
     #' 
     #' @examples 
     #' # an SIR model
-    #' SIR = Model$new(title="SIR")
+    #' SIR = Model$new()
     #' SIR$compartment(S ~ -beta*S*I/N)$
     #'   compartment(I ~ beta*S*I/N - gamma*I)$
     #'   compartment(R ~ gamma*I)$
@@ -320,7 +313,7 @@ Model <- R6Class(
     #' 
     #' @examples
     #' # an SIR model
-    #' SIR = Model$new(title="SIR")
+    #' SIR = Model$new()
     #' SIR$compartment(S ~ -beta*S*I)$
     #'   compartment(I ~ beta*S*I - gamma*I)$
     #'   compartment(R ~ gamma*I)$
@@ -384,7 +377,7 @@ Model <- R6Class(
     #' 
     #' @examples
     #' # an SIR model
-    #' SIR = Model$new(title="SIR")
+    #' SIR = Model$new()
     #' SIR$compartment(S ~ -beta*S*I/N)$
     #'   compartment(I ~ beta*S*I/N - gamma*I)$
     #'   compartment(R ~ gamma*I)$
@@ -438,7 +431,7 @@ Model <- R6Class(
     #' 
     #' @examples
     #' an SIR model
-    #' SIR = Model$new(title="SIR")
+    #' SIR = Model$new()
     #' SIR$compartment(S ~ -beta*S*I/N)$
     #'   compartment(I ~ beta*S*I/N - gamma*I)$
     #'   compartment(R ~ gamma*I)$
@@ -478,7 +471,7 @@ Model <- R6Class(
 
     #' @description format the class for printing
     format = function() {
-      l = c(paste0("Model: ", self$title))
+      l = "Model: "
       if (length(private$.compartments) > 0) {
         l = c(l, "  Compartments:")
         for (c in private$.compartments) {
@@ -553,7 +546,6 @@ Model <- R6Class(
 
 if (exists("TEST") && is.logical(TEST) && TEST) {
   m = Model$new(
-    title = "SIR", 
     S ~ - beta*S*I/N,
     I ~ beta*S*I/N - gamma*I,
     R ~ gamma*I,

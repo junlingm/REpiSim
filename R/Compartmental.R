@@ -147,16 +147,15 @@ Compartmental <- R6Class(
   public = list(
     #' @description constructor
     #' @param ... the names of the compartment, or substitutions
-    #' @param title the name of the model
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR = Compartmental$new(S, I, R)
     #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
-    initialize = function(..., title = "", file = NULL) {
+    initialize = function(..., file = NULL) {
       if (!is.null(file)) {
         if (is.character(file)) {
           if (!file.exists(file))
@@ -166,9 +165,7 @@ Compartmental <- R6Class(
           file = e$model
           if (is.null(file)) 
             stop("not a valid model file: ", file)
-          title = if (is.null(e$title)) e$title else title
         }
-        self$title = title  
         if (is.null(file$compartments) || !is.character(file$compartments) ||
             any(file$compartments == ""))
           stop("invalid model file")
@@ -180,7 +177,6 @@ Compartmental <- R6Class(
           stop("invalid model file")
         do.call(self$where, file$substitutions)
       } else {
-        self$title = title
         args = as.list(substitute(list(...)))[-1]
         ns = names(args)
         if (length(args) > 0) {
@@ -198,7 +194,7 @@ Compartmental <- R6Class(
     #' @return an invisible self for chaining methods
     #' @examples 
     #' # an SIR model
-    #' SIR = Compartmental$new(title="SIR")
+    #' SIR = Compartmental$new()
     #' SIR$compartment("S")$compartment("I")$compartment(R)
     #' SIR$transition(S->I ~ beta*S*I/N, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
@@ -225,7 +221,7 @@ Compartmental <- R6Class(
     #' is automatically removed.
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR = Compartmental$new(S, I, R)
     #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
@@ -277,7 +273,7 @@ Compartmental <- R6Class(
     #' 
     #' @examples
     #' # an SIR model
-    #' SIR = Compartmental$new(S, I, R, title="SIR")
+    #' SIR = Compartmental$new(S, I, R)
     #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
@@ -389,7 +385,7 @@ Compartmental <- R6Class(
     
     #' @description format the class for printing
     format = function() {
-      l = c(paste0("Compartmental: ", self$title))
+      l = "Compartmental: "
       if (length(private$.compartments) > 0) {
         l = c(l, paste0("  Compartments: ", paste(self$compartments, collapse = ", ")))
       }
@@ -439,7 +435,7 @@ Compartmental <- R6Class(
 )
 
 if (exists("TEST") && is.logical(TEST) && TEST) {
-  m = Compartmental$new(title="SIR", S, I, R)
+  m = Compartmental$new(S, I, R)
   m$transition(I<-S ~ beta*S*I/N, N=S+I+R)
   m$transition(R<-I ~ gamma, percapita = TRUE)
   m$where(N=S+I+R)
