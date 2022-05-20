@@ -185,7 +185,7 @@ change.extension <- function(file, ext.from, ext.to) {
   if (is.null(file)) return(NULL)
   f = tolower(file)
   if (substring(f, nchar(f)-nchar(ext.from) + 1) == tolower(ext.from))
-  paste0(file, ext.to)
+  paste0(substring(file, 1, nchar(f)-nchar(ext.from)), ext.to)
 }
 
 #' generate a PDF file from the given latex commands
