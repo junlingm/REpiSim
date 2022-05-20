@@ -131,7 +131,7 @@ Compartmental <- R6Class(
     # whether the name is defined as a transition, a compartment,
     # a parameter or a substitution
     defined = function(name) {
-      super$defined || !is.null(private$.transitions[[name]])
+      super$defined(name) || !is.null(private$.transitions[[name]])
     },
     
     # perform the actual rename. If from is a transition, the
