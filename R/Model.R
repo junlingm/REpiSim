@@ -540,6 +540,20 @@ Model <- R6Class(
           attr(l[[w$name]], "compartment") = TRUE
       }
       l
+    },
+    
+    #' @field representation a read-only active field that returns the representation of the model
+    #' it returns a list that contains the equations substitutions. The compartmental model can 
+    #' then be reconstructed from the representation. 
+    representation = function() {
+      list(
+        class = "Model",
+        compartments = sapply(
+          private$.compartments,
+          function(C) private$.formula[[C$value]]$formula
+        ),
+        substitutions = self$substitutions
+      )
     }
   )
 )
