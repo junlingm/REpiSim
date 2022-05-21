@@ -224,6 +224,31 @@ Model <- R6Class(
       }
       s$compartment = FALSE
       s
+    },
+    
+    # load the model from a file
+    load = function(file) {
+      if (is.character(file)) {
+        if (!file.exists(file))
+          stop("file does not exist: ", file)
+        e = new.env()
+        load(file, envir=e)
+        file = e$model
+        if (is.null(file)) 
+          stop("not a valid model file: ", file)
+      }
+      private$construct(file)
+    },
+    
+    #reconstruct the model from a representation
+    construct = function(representation) {
+      if (!identical(representation$class, "Model"))
+        stop("invalid model file")
+      for (C in names(representation$compartments)) {
+        r = representation$compartments[[C]]
+        self$compartment(call("~", as.name(C), r))
+      }
+      self$where(pairs=representation$substitutions)
     }
   ),
 
@@ -235,6 +260,8 @@ Model <- R6Class(
     #' @param ... Each extra parameter is either passed to the `compartment` method
     #' if it is a formula with the form `name ~ value`, or passed to the
     #' `where` methods to define a substitution if it is a named expression.
+    #' @param file if not NULL, a path or connection to a model file 
+    #' to read the model from
     #' 
     #' @examples
     #' # An SIR model 
@@ -245,7 +272,8 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(...) {
+    initialize = function(..., file=NULL) {
+      if (!is.null(file)) private$load(file)
       args = as.list(substitute(list(...)))[-1]
       ns = names(args)
       if (length(args) > 0) {
