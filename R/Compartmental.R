@@ -426,6 +426,7 @@ Compartmental <- R6Class(
     #' self$substitutions. The compartmental model can then be reconstructed from the representation. 
     representation = function() {
       list(
+        class = "Compartmental",
         compartments = self$compartments,
         transitions = self$transitions,
         substitutions = self$substitutions
