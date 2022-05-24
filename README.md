@@ -3,11 +3,11 @@
 This R package provides an interface to define compartmental infectious disease models, typeset the model in LaTeX, simulate the model numerically by solving the ODE system, ot simulate the model stochastically using the Gillespie method. If you are simply interested in simulating an ODE model, this package also provides an interface to define an ODE model with ease.
 
 ## Model Class
-The main interface to define a generic ODE model is the ```Model``` R6 class. The equations may be directly defined in the ```new``` method, or individually specified using the ```compartment``` method. See more details below. The parameters of the model are automatically extracted from the equations. These parameters may also be defined as substitutions, i.e., as an expression.
+The R6 class R6 class to define a generic ODE model is the ```Model```. The equations may be directly defined in the ```new``` method, or individually specified using the ```compartment``` method. See more details below. The parameters of the model are automatically extracted from the equations. These parameters may also be defined as substitutions, i.e., as an expression.
 
 The model may then be passed to a TexFormatter object to typeset as LaTeX equations, or be passed to an ODE object to numerically solve the ODE.
 
-### Creating a model
+### Create a model
 
 To create a model, we can use the ```Model$new()``` method with either no argument (which createa an empty model) and then use the ```compartment``` method to define each class, or directly pass the equations to the ```new``` method.
 
@@ -84,7 +84,51 @@ sim$simulate(
 ```
 
 ## Compartmental class
-The main interface for defining a compartmental model is the R6 class named Compartmental, which is a subclass of ```Model```. The constructor takes compartmental names as input. Then you can specify the transitions (flows) between compartments using the transition method. The parameters of the model are automatically extracted from the transition rates. These parameters may also be defined as substitutions, i.e., as an expression.
+The R6 class for defining a compartmental model is Compartmental, which is a subclass of ```Model```. The main advantage of using the Compartmental class over the Model class is that we can specify state transitions, i.e., we describe the flowchart instead of directly specifying the equations. We indeed provide a facility to generate the flowchart as the LaTeX code for a tikzpicture. In addition, the state transitions correspond to random events. We can thus run stochastic simulations using the Gillespie method.
 
-Because it is a subclass of Model, we may use TexFormatter and ODE with it. In addition, a Compartmental object may be passed to an RGillespie object for stochastic simulation. You may also use CGillespie to do the simulation using C++, which is about 10x faster but slower in compilation. The CGillespie class needs the ```cpp11``` package to be installed.
+### Create a compartmental model
 
+The constructor of the Compartmental class takes the names of compartments. Alternatively the class names may also be specified using the ```compartment``` method, which takes one compartment name. To create the SIR model, we may start with the following statement
+
+```
+m = Compartmental$new(S, I, R)
+```
+
+The transitions are specified by the ```transition``` method using a formula
+that has the form ```from -> to ~ rate``` where from and to are the compartment names, and rate is an expression for the rate of the transition. Either from or to may be NULL, specifying that new individuals is from outside the system (e.g., births) or the individuals leave the system (e.g., deaths). A transition has a name, which can be used to further modify it. It can be specified by the ```name``` argument. Alternatively, if the name is not specified, then a name is automatically generated, and is returned by the ```transition``` method. Substitutions may be passed to the transition method as named arguments. For example, the transitions for an SIR model with births and deaths may be specified as
+
+```
+# infection, where the population size N is defined as a substitution
+m$transition(S->I ~ beta*S*I/N, N=S+I+R)
+# recovery
+m$transition(I->R ~ gamma*I)
+# births
+m$transition(NULL->S ~ lambda)
+# deaths
+death.S = m$transition(S->NULL ~ mu*S)
+m$transition(I->NULL ~ mu*I)
+m$transition(R->NULL ~ mu*R)
+print(m)
+```
+
+
+The rate may be specified as a per capita rate, either by specifying ```percapita=TRUE``` in the argument, or specify the rate as ```percapita(rate)```. The following statements are equivalent.
+
+```
+m$transition(S->NULL ~ mu*S, name=death.S)
+m$transition(S->NULL ~ percapita(mu), name=death.S)
+m$transition(S->NULL ~ mu, percapita=TRUE, name=death.S)
+```
+
+### Stochastic simulations
+
+Because the transitions of a compartmental model may correspond to random events that change the system state, we may use the Gillespie method to simulate the model. To do so, we use an object of the ```RGillespie``` R6 class, which is an R implementation. Like the ODE simulate, the constructor takes a compartmental model (note that it does not work with the Model class). To simulate, we use the ```simulate``` method, like the ODE simulation.
+
+```
+sim = RGillespie$new(m)
+x = sim$simulate(
+  t=0:100, 
+  y0=c(S=1000, I=10, R=0),
+  parms=c(beta=0.4, gamma=0.2, lambda=100, mu=0.1))
+print(head(x))
+```
