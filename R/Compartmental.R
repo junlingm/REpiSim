@@ -110,7 +110,7 @@ Compartmental <- R6Class(
 
     # parse the formula to get the rate of a transition
     parse.rate = function(e) {
-      if (!is.call(e)) as.character(e) else {
+      if (!is.call(e)) e else {
         if (e[[1]] != "~") stop("invalid transition") 
         list(compartment = e[[2]], rate=e[[3]])
       }  
