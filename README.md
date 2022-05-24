@@ -12,9 +12,11 @@ The model may then be passed to a TexFormatter object to typeset as LaTeX equati
 To create a model, we can use the ```Model$new()``` method with either no argument (which createa an empty model) and then use the ```compartment``` method to define each class, or directly pass the equations to the ```new``` method.
 
 An equation can be expressed as a formula. For example, `S ~ - beta*S*I` defines a compartment S with the equation
+
 \[
 \frac{dS}{dt} = \beta S I
 \]
+
 The following code defines a SIR model with standard incidence.
 ```
 m = Model$new(
@@ -76,7 +78,8 @@ We may also select a subset of state variables to simulate, using the ```vars```
 sim$simulate(
   t=0:100, 
   y0=c(S=1000, I=10, R=0), 
-  parms=c(beta=0.4, gamma=0.2), vars=c("I", "N")
+  parms=c(beta=0.4, gamma=0.2), 
+  vars=c("I", "N")
 )
 ```
 
