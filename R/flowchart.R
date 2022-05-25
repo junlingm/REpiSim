@@ -59,7 +59,7 @@ Label.directions = c("above", "below", "left", "right")
 #' @param direction the relative position of the label to the arc
 #' @return a character holding the tikz command for the property of the label
 #' @export
-Label <- function(pos=NULL, direction=Label.directions, ...) {
+Label <- function(pos=NULL, direction=Label.directions) {
   args = c()
   if (!is.null(pos)) {
     if (!is.numeric(pos) || pos < 0 || pos > 1)
@@ -83,10 +83,16 @@ Label <- function(pos=NULL, direction=Label.directions, ...) {
 #' @return a character holding the tikz command for the property of the label
 #' @export
 Arc <- function(from, to, rate, label=NULL, edge=NULL) {
-  if (!is.null(edge)) if (edge == "(") edge = "bend left" else 
-    if (edge == ")") edge = "bend right"
-    paste0("\\path[->] (", from, ") edge[", edge, 
-           "] node[", label, "] {\\small$", rate, "$} (", to, ");")
+  if (!is.null(edge)) {
+    if (edge == "(") edge = "bend left" else 
+      if (edge == ")") edge = "bend right"
+  }
+  if (is.numeric(from) && length(from) >= 2) 
+    from = paste(from[1:2], collapse=",")
+  if (is.numeric(to) && length(to) >= 2)
+    to = paste(to[1:2], collapse=",")
+  paste0("\\path[->] (", from, ") edge[", edge, 
+         "] node[", label, "] {\\small$", rate, "$} (", to, ");")
 }
 
 #' generate the flow chart for a compartmental model
