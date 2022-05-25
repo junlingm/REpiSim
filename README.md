@@ -132,3 +132,30 @@ x = sim$simulate(
   parms=c(beta=0.4, gamma=0.2, lambda=100, mu=0.1))
 print(head(x))
 ```
+
+### Flowchart
+The flowchart for a compartmental model can be generated using the ```flowchart``` function. Its first argument is the model, the second compartment is a TexFormatter object to format the compartments and rates. Following them is a set of named arguments, one for each compartment, and optionally one for each transsition. 
+
+A compartment annotation is the tikz "\\node" command. It can also be specified by the Node function, the most important argument is the first one ```at```, specifying the the position (a length 2 vector giving the tikz node coordinate). The next argument is the shape (default to "rectangle"), then a boolean ```rounded.corner``` specifying whether to use rounded corner (default to TRUE), then an R color name ```fill``` specifying the filling color for the node (default to NULL).
+
+An arc annotation is the tikz "\\path" command. It can also be specified using the "Arc" function. The first argument ```label``` is the text specifying the label on the arc (in the square bracket following the corresponding "\\node" command). This can be generated using the ```Label``` function which taks two argument, the "position" (a real value btween 0 and 1, 0 being left most and 1 being right most) and the "direction" which is one of "above", "below", "left", "right". The second argument of Arc, namely "edge", is the text in the square bracket following the tikz "\\path" command. For example, it could be "bend right=45". The following example generates a flowchart for the SIR model. If the transition has no origin ("from" state is NULL) or destination ("to" state is NULL), then the origin or destination of the arc must be specified using the named "from" and "to" arguments, giving the coordinates.
+
+```
+chart = flowchart(
+  m, tex, 
+  S=Node(at=c(0,0)),
+  I=Node(at=c(2,0)),
+  R=Node(at=c(4,0)),
+  `->S`=Arc(from=c(-2,0)),
+  `S->`=Arc(to=c(0,-1), label=Label(direction="left")),
+  `I->`=Arc(to=c(2,-1), label=Label(direction="left")),
+  `R->`=Arc(to=c(4,-1), label=Label(direction="left")))
+cat(chart, "\n")
+```
+
+A PDF flowchart may generated using the tikz.pdf function, which first argument is the PDF file name, then followed by the output of the flowchart function. A set of LaTeX preamble commands may be given in the named "preambles" argument (for example, defining some LaTeX commands used by the model). The font size may be given in the named "fontsize" argument (default to 12), in LaTeX points. The following example generates an "SIR.pdf" file for the flowchart.
+
+```
+tikz.pdf("SIR.pdf", chart, fontsize=9)
+```
+
