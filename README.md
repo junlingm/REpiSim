@@ -3,7 +3,7 @@
 This R package provides an interface to define compartmental infectious disease models, typeset the model in LaTeX, simulate the model numerically by solving the ODE system, ot simulate the model stochastically using the Gillespie method. If you are simply interested in simulating an ODE model, this package also provides an interface to define an ODE model with ease.
 
 ## Model Class
-The R6 class R6 class to define a generic ODE model is the ```Model```. The equations may be directly defined in the ```new``` method, or individually specified using the ```compartment``` method. See more details below. The parameters of the model are automatically extracted from the equations. These parameters may also be defined as substitutions, i.e., as an expression.
+The R6 class to define a generic ODE model is the ```Model```. The equations may be directly defined in the ```new``` method, or individually specified using the ```compartment``` method. See more details below. The parameters of the model are automatically extracted from the equations. These parameters may also be defined as substitutions, i.e., as an expression.
 
 The model may then be passed to a TexFormatter object to typeset as LaTeX equations, or be passed to an ODE object to numerically solve the ODE.
 
