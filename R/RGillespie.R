@@ -78,6 +78,19 @@ RGillespie = R6Class(
     
     # run the simulation
     run = function(t, y, parms) {
+      mistype = which(is.na(y) | y != as.integer(y) | y < 0)
+      if (length(mistype) != 0) {
+        if (length(mistype) > 1) {
+          s = "s"
+          a = ""
+        } else {
+          s = ""
+          a = "a "
+        }
+        stop("the initial condition", s, " for ",
+             paste(names(y[mistype]), collapse=", "),
+             " must be ", a, "nonnegative integer", s, ".")
+      }
       y = y[private$compartments]
       parms = parms[private$parameters]      
       if (any(!is.finite(t)))

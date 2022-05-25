@@ -220,6 +220,19 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
     
     # perform the simulation.
     run = function(t, y, parms) {
+      mistype = which(is.na(y) | y != as.integer(y) | y < 0)
+      if (length(mistype) != 0) {
+        if (length(mistype) > 1) {
+          s = "s"
+          a = ""
+        } else {
+          s = ""
+          a = "a "
+        }
+        stop("the initial condition", s, " for ",
+             paste(names(y[mistype]), collapse=", "),
+             " must be ", a, "nonnegative integer", s, ".")
+      }
       y = private$order(y, private$compartments)
       parms = private$order(parms, private$parameters)
       data = as.data.frame(private$gillespie(as.numeric(t), y, parms))
