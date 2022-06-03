@@ -124,9 +124,9 @@ Model <- R6Class(
       for (p in pars) {
         var = p$name
         if (!is.null(p$definition)) {
-          if (is.null(private$.compartments[[var]]))
+          if (!is.null(private$.compartments[[var]]))
             stop("Redefining the compartment ", var, " as a function")
-          if (is.null(private$.where[[var]]))
+          if (!is.null(private$.where[[var]]))
             stop("Redefining the substitution ", var, " as a function")
           if (!is.null(private$.parameters[[var]]))
             stop("Redefining the parameter ", var, " as a function")
