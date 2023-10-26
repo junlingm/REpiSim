@@ -37,6 +37,10 @@ Model <- R6Class(
     # whether the compartment field of a substitution need to be recalculated
     recalc.compartment = FALSE,
     
+    # check if a function is valid
+    valid.function = function(name) {
+      if (self$restricted) name %in% valid.functions else TRUE
+    },
 
     # build up the order of dependence of an alias
     build.order = function(order, info) {
@@ -272,6 +276,10 @@ Model <- R6Class(
   ),
 
   public = list(
+    #' @field restricted a boolean variable indicating whether to restrict functions 
+    #' allowed to be used in the ODE system. Default to TRUE
+    restricted = TRUE,
+    
     #' @description constructor
     #' 
     #' It constructs a Model object with compartments and substitutions.
@@ -281,7 +289,8 @@ Model <- R6Class(
     #' `where` methods to define a substitution if it is a named expression.
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
-    #' 
+    #' @param .restricted a boolean variable indicating whether the ODE system
+    #' only has access to a limited set of functions. Default to TRUE
     #' @examples
     #' # An SIR model 
     #' SIR = Model$new(
@@ -291,7 +300,8 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., file=NULL) {
+    initialize = function(..., file=NULL, .restricted=TRUE) {
+      self$restricted = .restricted
       if (!is.null(file)) private$load(file)
       args = as.list(substitute(list(...)))[-1]
       ns = names(args)
