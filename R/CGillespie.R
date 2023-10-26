@@ -200,7 +200,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       l = c(
         private$format.var(model$compartments, "__y"),
         private$format.var(model$parameters, "__parms"),
-        private$format.substitution(model$substitutions),
+        private$format.substitution(),
         private$result,
         private$format.rate(model$transitions),
         private$middle,

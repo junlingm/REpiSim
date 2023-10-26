@@ -47,11 +47,11 @@ Simulator = R6Class(
     },
 
     # create a list of R assignment calls to calculate the substitutions
-    format.substitution = function(S) {
+    format.substitution = function() {
       c(
         private$format.var(private$compartments, "y"),
         private$format.var(private$parameters, "parms"),
-        lapply(S, private$format.equation)
+        lapply(private$alias, private$format.equation)
       )
     },
     
@@ -78,7 +78,7 @@ Simulator = R6Class(
     initialize = function(model) {
       private$compartments = model$compartments
       private$parameters = model$parameters
-      subst = model$substitutions
+      subst = model$substitutions[model$order]
       private$alias = list()
       for (n in names(subst)) {
         s = subst[[n]]

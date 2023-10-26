@@ -16,8 +16,8 @@ ODE = R6Class(
       der = lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
       l = c(
         as.name("{"),
-        private$format.substitution(system$where),
-        lapply(system$equation, private$format.equation),
+        private$format.substitution(),
+        lapply(system$equations, private$format.equation),
         call("list", as.call(c(list(as.name("c")), der)))
       )
       as.function(c(alist(t=, y=, parms=), as.call(l)))

@@ -38,6 +38,22 @@ Model <- R6Class(
     recalc.compartment = FALSE,
     
 
+    # build up the order of dependence of an alias
+    build.order = function(order, info) {
+      # if var is already available in order, no need to change the order.
+      if (info$name %in% order) return(order)
+      # calculate the unavailable dependencies (i.e., not in order)
+      deps = setdiff(private$.formula[[info$value]]$depend, order)
+      # no dependencies or dependencies are already available
+      # then we can just put it in order
+      if (length(deps) == 0) return(c(order, info$name))
+      for (d in deps) {
+        v = private$.where[[d]]
+        if (!is.null(v)) order = private$build.order(order, v)
+      }
+      c(order, info$name)
+    },
+    
     # this function returns an alist with a given number n of arguments
     make.alist = function(n) {
       if (n == 0) NULL else {
@@ -85,11 +101,11 @@ Model <- R6Class(
       }
       if (is.name(formula)) {
         var = as.character(formula)
-        if (is.null(parameters[[formula]]))
+        if (var != "t" && is.null(parameters[[formula]]))
           parameters[[var]] = new(var)
       } else if (is.call(formula)) {
         var = as.character(formula[[1]])
-        if (!var %in% valid.functions)
+        if (!private$valid.function(var))
           parameters[[var]] = new(var, private$make.alist(length(formula)-1))
         for (t in as.list(formula)[-1])
           parameters = private$extract.parameters(name, t, parameters)
@@ -585,6 +601,12 @@ Model <- R6Class(
         ),
         substitutions = self$substitutions
       )
+    },
+    
+    #' @field order a read-only active field that returns the order of the equations
+    #' and aliases that must appear to satisfy dependencies in calculation
+    order = function() {
+      Reduce(private$build.order, private$.where, c())
     }
   )
 )
