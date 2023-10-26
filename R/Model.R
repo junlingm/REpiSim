@@ -277,8 +277,8 @@ Model <- R6Class(
 
   public = list(
     #' @field restricted a boolean variable indicating whether to restrict functions 
-    #' allowed to be used in the ODE system. Default to TRUE
-    restricted = TRUE,
+    #' allowed to be used in the ODE system. Default to FALSE
+    restricted = FALSE,
     
     #' @description constructor
     #' 
@@ -300,7 +300,7 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., file=NULL, .restricted=TRUE) {
+    initialize = function(..., file=NULL, .restricted=FALSE) {
       self$restricted = .restricted
       if (!is.null(file)) private$load(file)
       args = as.list(substitute(list(...)))[-1]
