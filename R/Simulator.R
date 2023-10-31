@@ -78,6 +78,9 @@ Simulator = R6Class(
     #' @details the Simulation class is an abstract class. It's constructor
     #' should not be explicitly called.
     initialize = function(model) {
+      missing = model$missing
+      if (length(missing) > 0) 
+        stop("Undefined functions: ", missing)
       private$compartments = model$compartments
       private$parameters = model$parameters
       subst = model$substitutions[model$order]

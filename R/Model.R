@@ -3,13 +3,6 @@ D = function(x, ...) {
   as.call(c(list("'", x), vars))
 }
 
-valid.functions = c(
-  "+", "-", "*", "/", "^", "%%", "%/%",
-  "(", "{", ">", "<", ">=", "<=", "&", "|", "&&", "||",
-  "sin", "cos", "tan", "asin", "acos", "atan", "log", "exp", "log10", 
-  "sqrt", "abs", "ceiling", "floor", "trunc"
-)
-
 letter.label = function(n, enclosed = c("(", ")")) {
   if (!is.null(enclosed) && length(enclosed) == 1)
     enclosed = rep(enclosed, 2)
@@ -36,13 +29,8 @@ Model <- R6Class(
     .formula = list(),
     # whether the compartment field of a substitution need to be recalculated
     recalc.compartment = FALSE,
-    
-    # check if a function is valid
-    valid.function = function(name) {
-      if (self$restricted) {
-        name %in% valid.functions || !is.null(self$attached.functions[[name]])
-      } else TRUE
-    },
+    # external functions used by this model
+    .external.functions = list(),
 
     # build up the order of dependence of an alias
     build.order = function(order, info) {
@@ -111,8 +99,8 @@ Model <- R6Class(
           parameters[[var]] = new(var)
       } else if (is.call(formula)) {
         var = as.character(formula[[1]])
-        if (!private$valid.function(var))
-          parameters[[var]] = new(var, private$make.alist(length(formula)-1))
+        if (! var %in% private$.external.functions)
+          private$.external.functions = c(private$.external.functions, var)
         for (t in as.list(formula)[-1])
           parameters = private$extract.parameters(name, t, parameters)
       }
@@ -152,8 +140,6 @@ Model <- R6Class(
             stop("Redefining the substitution ", var, " as a function")
           if (!is.null(private$.parameters[[var]]))
             stop("Redefining the parameter ", var, " as a function")
-          else if (!var %in% valid.functions)
-            stop("The use of the function ", var, " is not allowed")
         }
       }
       # are we redefining the formula or removing the formula?
@@ -627,6 +613,18 @@ Model <- R6Class(
     #' and aliases that must appear to satisfy dependencies in calculation
     order = function() {
       Reduce(private$build.order, private$.where, c())
+    },
+    
+    #' @field missing a read-only field that returns the names of functions defined 
+    #' neither in the global environment, nor in the attached.functions list.
+    missing = function() {
+      l = c()
+      for (fname in private$.external.functions) {
+        f = if (exists(fname)) get(fname) else self$attached.functions[[fname]]
+        if (!is.function(f))
+          l = c(l, fname)
+      }
+      l
     }
   )
 )
