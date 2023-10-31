@@ -39,7 +39,9 @@ Model <- R6Class(
     
     # check if a function is valid
     valid.function = function(name) {
-      if (self$restricted) name %in% valid.functions else TRUE
+      if (self$restricted) {
+        name %in% valid.functions || !is.null(self$attached.functions[[name]])
+      } else TRUE
     },
 
     # build up the order of dependence of an alias
@@ -261,6 +263,7 @@ Model <- R6Class(
           stop("not a valid model file: ", file)
       }
       private$construct(file)
+      self$attached.functions = file$attached.functions
     },
     
     #reconstruct the model from a representation
@@ -279,6 +282,10 @@ Model <- R6Class(
     #' @field restricted a boolean variable indicating whether to restrict functions 
     #' allowed to be used in the ODE system. Default to FALSE
     restricted = FALSE,
+    
+    #' @field attached.functions the list of provided R functions to be used in
+    #' the model
+    attached.functions = list(),
     
     #' @description constructor
     #' 
@@ -308,7 +315,9 @@ Model <- R6Class(
       if (length(args) > 0) {
         for (i in 1:length(args)) {
           if (!is.null(ns) && ns[i] != "") {
-            self$where(pairs = args[i])
+            if (is.call(args[[i]]) && args[[i]][[1]] == "function") {
+              self$attached.functions[[ns[i]]] = eval(args[[i]])
+            } else self$where(pairs = args[i])
           } else self$compartment(args[[i]])
         }
       }
@@ -609,7 +618,8 @@ Model <- R6Class(
           private$.compartments,
           function(C) private$.formula[[C$value]]$formula
         ),
-        substitutions = self$substitutions
+        substitutions = self$substitutions,
+        attached.functions = self$attached.functions
       )
     },
     
