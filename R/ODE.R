@@ -146,7 +146,7 @@ Equilibrium = R6Class(
       if (!is.null(private$vary)) {
         col = list()
         col[[private$vary]] = private$range
-        cbind(col, data)
+        data = cbind(col, data)
       }
       data
     }
