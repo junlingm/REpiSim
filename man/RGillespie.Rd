@@ -32,20 +32,20 @@ g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-clone}{\code{RGillespie$clone()}}
+\item \href{#method-RGillespie-clone}{\code{RGillespie$clone()}}
 }
 }
-\if{html}{
-\out{<details open ><summary>Inherited methods</summary>}
-\itemize{
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="initialize">}\href{../../REpiSim/html/Simulator.html#method-initialize}{\code{REpiSim::Simulator$initialize()}}\out{</span>}
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate">}\href{../../REpiSim/html/Simulator.html#method-simulate}{\code{REpiSim::Simulator$simulate()}}\out{</span>}
-}
-\out{</details>}
-}
+\if{html}{\out{
+<details open><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="initialize"><a href='../../REpiSim/html/Simulator.html#method-Simulator-initialize'><code>REpiSim::Simulator$initialize()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate"><a href='../../REpiSim/html/Simulator.html#method-Simulator-simulate'><code>REpiSim::Simulator$simulate()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-RGillespie-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-RGillespie-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

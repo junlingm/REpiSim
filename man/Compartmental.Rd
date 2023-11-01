@@ -48,7 +48,7 @@ If the transition with the given name exists, then the transition is changed.
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
@@ -58,7 +58,7 @@ print(SIR)
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(title="SIR")
+SIR = Compartmental$new()
 SIR$compartment("S")$compartment("I")$compartment(R)
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
@@ -70,7 +70,7 @@ print(SIR)
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
@@ -80,7 +80,7 @@ print(SIR)
 ## ------------------------------------------------
 
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
@@ -112,37 +112,35 @@ self$substitutions. The compartmental model can then be reconstructed from the r
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{Compartmental$new()}}
-\item \href{#method-compartment}{\code{Compartmental$compartment()}}
-\item \href{#method-delete}{\code{Compartmental$delete()}}
-\item \href{#method-transition}{\code{Compartmental$transition()}}
-\item \href{#method-format}{\code{Compartmental$format()}}
-\item \href{#method-clone}{\code{Compartmental$clone()}}
+\item \href{#method-Compartmental-new}{\code{Compartmental$new()}}
+\item \href{#method-Compartmental-compartment}{\code{Compartmental$compartment()}}
+\item \href{#method-Compartmental-delete}{\code{Compartmental$delete()}}
+\item \href{#method-Compartmental-transition}{\code{Compartmental$transition()}}
+\item \href{#method-Compartmental-format}{\code{Compartmental$format()}}
+\item \href{#method-Compartmental-clone}{\code{Compartmental$clone()}}
 }
 }
-\if{html}{
-\out{<details open ><summary>Inherited methods</summary>}
-\itemize{
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Model" data-id="rename">}\href{../../REpiSim/html/Model.html#method-rename}{\code{REpiSim::Model$rename()}}\out{</span>}
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Model" data-id="where">}\href{../../REpiSim/html/Model.html#method-where}{\code{REpiSim::Model$where()}}\out{</span>}
-}
-\out{</details>}
-}
+\if{html}{\out{
+<details open><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Model" data-id="rename"><a href='../../REpiSim/html/Model.html#method-Model-rename'><code>REpiSim::Model$rename()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Model" data-id="where"><a href='../../REpiSim/html/Model.html#method-Model-where'><code>REpiSim::Model$where()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-Compartmental-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-new}{}}}
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Compartmental$new(..., title = "", file = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Compartmental$new(..., file = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{the names of the compartment, or substitutions}
-
-\item{\code{title}}{the name of the model}
 
 \item{\code{file}}{if not NULL, a path or connection to a model file 
 to read the model from}
@@ -152,7 +150,7 @@ to read the model from}
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
@@ -163,8 +161,8 @@ print(SIR)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-compartment"></a>}}
-\if{latex}{\out{\hypertarget{method-compartment}{}}}
+\if{html}{\out{<a id="method-Compartmental-compartment"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-compartment}{}}}
 \subsection{Method \code{compartment()}}{
 define a compartment
 \subsection{Usage}{
@@ -184,7 +182,7 @@ an invisible self for chaining methods
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(title="SIR")
+SIR = Compartmental$new()
 SIR$compartment("S")$compartment("I")$compartment(R)
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
@@ -197,8 +195,8 @@ print(SIR)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-delete"></a>}}
-\if{latex}{\out{\hypertarget{method-delete}{}}}
+\if{html}{\out{<a id="method-Compartmental-delete"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-delete}{}}}
 \subsection{Method \code{delete()}}{
 delete a compartment, a substitution or a transition
 \subsection{Usage}{
@@ -219,7 +217,7 @@ an invisible self for chaining methods
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 print(SIR)
@@ -230,8 +228,8 @@ print(SIR)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-transition"></a>}}
-\if{latex}{\out{\hypertarget{method-transition}{}}}
+\if{html}{\out{<a id="method-Compartmental-transition"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-transition}{}}}
 \subsection{Method \code{transition()}}{
 define or change a transition
 \subsection{Usage}{
@@ -275,7 +273,7 @@ the name of the transition
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$transition(S->R ~ v, percapita=TRUE, name="vaccination")
@@ -296,8 +294,8 @@ print(SIR)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-format"></a>}}
-\if{latex}{\out{\hypertarget{method-format}{}}}
+\if{html}{\out{<a id="method-Compartmental-format"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-format}{}}}
 \subsection{Method \code{format()}}{
 format the class for printing
 \subsection{Usage}{
@@ -306,8 +304,8 @@ format the class for printing
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-Compartmental-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Compartmental-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

@@ -35,21 +35,21 @@ g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{CGillespie$new()}}
-\item \href{#method-finalize}{\code{CGillespie$finalize()}}
-\item \href{#method-clone}{\code{CGillespie$clone()}}
+\item \href{#method-CGillespie-new}{\code{CGillespie$new()}}
+\item \href{#method-CGillespie-finalize}{\code{CGillespie$finalize()}}
+\item \href{#method-CGillespie-clone}{\code{CGillespie$clone()}}
 }
 }
-\if{html}{
-\out{<details open ><summary>Inherited methods</summary>}
-\itemize{
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate">}\href{../../REpiSim/html/Simulator.html#method-simulate}{\code{REpiSim::Simulator$simulate()}}\out{</span>}
-}
-\out{</details>}
-}
+\if{html}{\out{
+<details open><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate"><a href='../../REpiSim/html/Simulator.html#method-Simulator-simulate'><code>REpiSim::Simulator$simulate()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-CGillespie-new"></a>}}
+\if{latex}{\out{\hypertarget{method-CGillespie-new}{}}}
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
@@ -77,8 +77,8 @@ g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-finalize"></a>}}
-\if{latex}{\out{\hypertarget{method-finalize}{}}}
+\if{html}{\out{<a id="method-CGillespie-finalize"></a>}}
+\if{latex}{\out{\hypertarget{method-CGillespie-finalize}{}}}
 \subsection{Method \code{finalize()}}{
 the destructor
 \subsection{Usage}{
@@ -92,8 +92,8 @@ after compiling the C++ simulation code.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-CGillespie-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-CGillespie-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

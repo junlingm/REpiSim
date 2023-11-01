@@ -85,20 +85,20 @@ in this list.}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{TexFormatter$new()}}
-\item \href{#method-set.symbols}{\code{TexFormatter$set.symbols()}}
-\item \href{#method-typeset}{\code{TexFormatter$typeset()}}
-\item \href{#method-enclose}{\code{TexFormatter$enclose()}}
-\item \href{#method-command}{\code{TexFormatter$command()}}
-\item \href{#method-environment}{\code{TexFormatter$environment()}}
-\item \href{#method-typeset.equation}{\code{TexFormatter$typeset.equation()}}
-\item \href{#method-format}{\code{TexFormatter$format()}}
-\item \href{#method-clone}{\code{TexFormatter$clone()}}
+\item \href{#method-TexFormatter-new}{\code{TexFormatter$new()}}
+\item \href{#method-TexFormatter-set.symbols}{\code{TexFormatter$set.symbols()}}
+\item \href{#method-TexFormatter-typeset}{\code{TexFormatter$typeset()}}
+\item \href{#method-TexFormatter-enclose}{\code{TexFormatter$enclose()}}
+\item \href{#method-TexFormatter-command}{\code{TexFormatter$command()}}
+\item \href{#method-TexFormatter-environment}{\code{TexFormatter$environment()}}
+\item \href{#method-TexFormatter-typeset.equation}{\code{TexFormatter$typeset.equation()}}
+\item \href{#method-TexFormatter-format}{\code{TexFormatter$format()}}
+\item \href{#method-TexFormatter-clone}{\code{TexFormatter$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-TexFormatter-new"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-new}{}}}
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
@@ -126,8 +126,8 @@ tex$typeset(quote(sin(alpha*I)/II))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set.symbols"></a>}}
-\if{latex}{\out{\hypertarget{method-set.symbols}{}}}
+\if{html}{\out{<a id="method-TexFormatter-set.symbols"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-set.symbols}{}}}
 \subsection{Method \code{set.symbols()}}{
 set/change the tex symbols of R names
 \subsection{Usage}{
@@ -159,8 +159,8 @@ description typeset an R expression
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-typeset"></a>}}
-\if{latex}{\out{\hypertarget{method-typeset}{}}}
+\if{html}{\out{<a id="method-TexFormatter-typeset"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-typeset}{}}}
 \subsection{Method \code{typeset()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{TexFormatter$typeset(R)}\if{html}{\out{</div>}}
@@ -187,8 +187,8 @@ tex$typeset(quote(sin(alpha*I)/II))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-enclose"></a>}}
-\if{latex}{\out{\hypertarget{method-enclose}{}}}
+\if{html}{\out{<a id="method-TexFormatter-enclose"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-enclose}{}}}
 \subsection{Method \code{enclose()}}{
 enclose the tex commands in brackets
 \subsection{Usage}{
@@ -221,8 +221,8 @@ tex$enclose(tex$typeset.equation(quote(alpha==beta)),
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-command"></a>}}
-\if{latex}{\out{\hypertarget{method-command}{}}}
+\if{html}{\out{<a id="method-TexFormatter-command"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-command}{}}}
 \subsection{Method \code{command()}}{
 generate a latex command
 \subsection{Usage}{
@@ -257,8 +257,8 @@ tex$command("documentclass", argument="article", option="12pt")
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-environment"></a>}}
-\if{latex}{\out{\hypertarget{method-environment}{}}}
+\if{html}{\out{<a id="method-TexFormatter-environment"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-environment}{}}}
 \subsection{Method \code{environment()}}{
 generate a latex environment
 \subsection{Usage}{
@@ -292,8 +292,8 @@ tex$environment("frame", argument="frame title", "line 1", "line 2")
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-typeset.equation"></a>}}
-\if{latex}{\out{\hypertarget{method-typeset.equation}{}}}
+\if{html}{\out{<a id="method-TexFormatter-typeset.equation"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-typeset.equation}{}}}
 \subsection{Method \code{typeset.equation()}}{
 typeset a system of equations 
 
@@ -341,8 +341,8 @@ tex$typeset.equation(SIR$equations$where)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-format"></a>}}
-\if{latex}{\out{\hypertarget{method-format}{}}}
+\if{html}{\out{<a id="method-TexFormatter-format"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-format}{}}}
 \subsection{Method \code{format()}}{
 a text representation of the class
 \subsection{Usage}{
@@ -351,8 +351,8 @@ a text representation of the class
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-TexFormatter-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-TexFormatter-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

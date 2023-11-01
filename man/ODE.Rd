@@ -12,32 +12,6 @@ A R6 class for numerically solving the ODE models
 \details{
 ODE is a subclass of `Simulator`. This class is only available if the `deSolve` 
 package is installed.
-
-the method repetitively call the simulate method to solve
-the system using the given `time`, `y0`, and `parms`. The 2-norm of the
-difference between y0 and the final state is calculated. If it is less then 
-`error` then the final state is returned as the equilibrium. Otherwise,
-the initial state is reset to be the final state, and the process is
-repeated for at most `max.iter` times.
-}
-\examples{
-
-## ------------------------------------------------
-## Method `ODE$equilibrium`
-## ------------------------------------------------
-
-    #' # an SIR model
-SIR = Model$new(title="SIR")
-SIR$compartment(S ~ -beta*S*I/N)$
-  compartment(I ~ beta*S*I/N - gamma*I)$
-  compartment(R ~ gamma*I)$
-  where(N = S + I + R)
-ode = ODE$new(SIR)
-ode$equilibrium(
-  time=0:40, 
-  y0=c(S=10000, I=1, R=0), 
-  parms=c(beta=0.4, gamma=0.2), 
-  alias = FALSE) # N is not returned.
 }
 \section{Super class}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{ODE}
@@ -53,21 +27,20 @@ to be passed to deSolve::ode as the `func` argument.}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{ODE$new()}}
-\item \href{#method-equilibrium}{\code{ODE$equilibrium()}}
-\item \href{#method-clone}{\code{ODE$clone()}}
+\item \href{#method-ODE-new}{\code{ODE$new()}}
+\item \href{#method-ODE-clone}{\code{ODE$clone()}}
 }
 }
-\if{html}{
-\out{<details open ><summary>Inherited methods</summary>}
-\itemize{
-\item \out{<span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate">}\href{../../REpiSim/html/Simulator.html#method-simulate}{\code{REpiSim::Simulator$simulate()}}\out{</span>}
-}
-\out{</details>}
-}
+\if{html}{\out{
+<details open><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Simulator" data-id="simulate"><a href='../../REpiSim/html/Simulator.html#method-Simulator-simulate'><code>REpiSim::Simulator$simulate()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-ODE-new"></a>}}
+\if{latex}{\out{\hypertarget{method-ODE-new}{}}}
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
@@ -84,72 +57,8 @@ of `Model`.}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-equilibrium"></a>}}
-\if{latex}{\out{\hypertarget{method-equilibrium}{}}}
-\subsection{Method \code{equilibrium()}}{
-calculate the equilibrium of the model
-
-Calculate the equilibrium of the the solution with a given initial
-condition.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ODE$equilibrium(
-  time,
-  y0,
-  parms,
-  max.iter = 100,
-  error = 1e-06,
-  vars = names(y0),
-  ...
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{time}}{a numeric vector giving times.}
-
-\item{\code{y0}}{a named numeric vector giving initial condition.}
-
-\item{\code{parms}}{a named numeric vector giving the parameter values.}
-
-\item{\code{max.iter}}{the maximum iterations to search for the equilibrium}
-
-\item{\code{error}}{a numeric value giving the 2-norm of the tolerance}
-
-\item{\code{vars}}{a character vector giving the compartments and substitutions
-which equilibrium value should be returned.}
-
-\item{\code{...}}{extra parameters to be passed to the `deSolve::ode` function.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-a named numeric vector giving the equilibrium value, or NULL
-if convergence is not achieved.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{    #' # an SIR model
-SIR = Model$new(title="SIR")
-SIR$compartment(S ~ -beta*S*I/N)$
-  compartment(I ~ beta*S*I/N - gamma*I)$
-  compartment(R ~ gamma*I)$
-  where(N = S + I + R)
-ode = ODE$new(SIR)
-ode$equilibrium(
-  time=0:40, 
-  y0=c(S=10000, I=1, R=0), 
-  parms=c(beta=0.4, gamma=0.2), 
-  alias = FALSE) # N is not returned.
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-ODE-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-ODE-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

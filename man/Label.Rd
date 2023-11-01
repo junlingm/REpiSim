@@ -4,7 +4,7 @@
 \alias{Label}
 \title{specify the properties of a label in a flowchart}
 \usage{
-Label(pos = NULL, direction = Label.directions, ...)
+Label(pos = NULL, direction = Label.directions)
 }
 \arguments{
 \item{pos}{a value in the interval [0,1] specifying the position

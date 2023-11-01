@@ -26,14 +26,14 @@ for the model.}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{Simulator$new()}}
-\item \href{#method-simulate}{\code{Simulator$simulate()}}
-\item \href{#method-clone}{\code{Simulator$clone()}}
+\item \href{#method-Simulator-new}{\code{Simulator$new()}}
+\item \href{#method-Simulator-simulate}{\code{Simulator$simulate()}}
+\item \href{#method-Simulator-clone}{\code{Simulator$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-Simulator-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Simulator-new}{}}}
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
@@ -49,12 +49,12 @@ constructor
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-simulate"></a>}}
-\if{latex}{\out{\hypertarget{method-simulate}{}}}
+\if{html}{\out{<a id="method-Simulator-simulate"></a>}}
+\if{latex}{\out{\hypertarget{method-Simulator-simulate}{}}}
 \subsection{Method \code{simulate()}}{
 simulate the model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Simulator$simulate(t, y0, parms = NULL, alias = TRUE, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Simulator$simulate(t, y0, parms = NULL, vars = names(y0), ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -66,7 +66,8 @@ simulate the model
 
 \item{\code{parms}}{a numeric vector of parameter values.}
 
-\item{\code{alias}}{a logical value. If TRUE, the values of the}
+\item{\code{vars}}{a character vector specifying the variable names to be returned. 
+A variable can be either a compartment or a substitution}
 
 \item{\code{...}}{extra arguments to be passed to the `ode` method
 substitutions that depend on the compartments are calculated 
@@ -76,13 +77,12 @@ and returned}
 }
 \subsection{Returns}{
 a data frame which rows correspond to each time in `t`, 
-and columns correspond to the value of each compartment (or
-substitution if alias=TRUE).
+and columns correspond to the variables specified in vars.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-Simulator-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Simulator-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{
