@@ -142,11 +142,11 @@ Equilibrium = R6Class(
     #' @return a data frame which rows correspond to each time in `t`, 
     #' and columns correspond to the variables specified in vars.
     simulate = function(t, y0, parms=NULL, vars=names(y0), ...) {
-      data = super$simulate(t, y0, parms, ...)
+      data = super$simulate(t, y0, parms, vars, ...)
       if (!is.null(private$vary)) {
         col = list()
         col[[private$vary]] = private$range
-        data = cbind(col, data)
+        data = cbind(as.data.frame(col), data)
       }
       data
     }
