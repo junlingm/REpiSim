@@ -143,7 +143,9 @@ Simulator = R6Class(
         stop("extra parameter values for ", extra)
       alias = any(vars %in% names(private$alias))
       data = private$.simulate(t, y0, parms, alias, ...)
-      data[, c("time", vars)]
+      if (colnames(data)[[1]] == "time")
+        vars = c("time", vars)
+      data[, vars]
     }
   ),
   
