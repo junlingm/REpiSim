@@ -1,7 +1,7 @@
 Package: REpiSim
 Type: Package
 Title: Mathematical Epidemiological Model Simulations in R
-Version: 0.1.0
+Version: 0.2.0
 Author: Junling Ma <junling@uvic.ca>
 Maintainer: Junling Ma <junling@uvic.ca>
 Description: More about what it does (maybe more than one line)
