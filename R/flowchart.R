@@ -79,7 +79,7 @@ Label <- function(pos=NULL, direction=Label.directions) {
 #' @param to the name of the compartment that this flow goes to.
 #' @param rate the rate of the flow, i.e., the label. An R expression
 #' @param label the property of the label, speficied by the Label function.
-#' @param edge ghe property for the arc, such as "bend left" (or "(") or "bend right" (or ")").
+#' @param edge the property for the arc, such as "bend left" (or "(") or "bend right" (or ")").
 #' @return a character holding the tikz command for the property of the label
 #' @export
 Arc <- function(from, to, rate, label=NULL, edge=NULL) {

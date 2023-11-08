@@ -1,4 +1,4 @@
-#' A S3 method to merge to lists
+#' A S3 method to merge two lists
 #' @param a a list
 #' @param b a list
 #' @return a merged list 
