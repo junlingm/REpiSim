@@ -139,7 +139,10 @@ Compartmental <- R6Class(
     do.rename = function(from, to) {
       if (!is.null(private$.transitions[[from]])) {
         private$.transitions[[to]] = private$.transitions[[from]]
+        private$.transitions[[to]]$name = to
         private$.transitions[[from]] = NULL
+        private$.formula[[to]] = private$.formula[[from]]
+        private$.formula[[from]] = NULL
       } else super$do.rename(from, to)
     },
     
