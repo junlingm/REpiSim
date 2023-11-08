@@ -505,7 +505,7 @@ Model <- R6Class(
         stop("Invalid name ", from)
       from = as.character(from)
       if (!private$defined(from))
-        stop(to, " is already defined")
+        stop(from, " is not defined")
 
       if (is.null(to))
         return(self$delete(from))
