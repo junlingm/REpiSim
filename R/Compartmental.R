@@ -232,9 +232,9 @@ Compartmental <- R6Class(
     #' @param percapita whether the rate is per capita, i.e., the total rate would 
     #' be the per capita rate multiplied by the from compartment.
     #' @param name the name of the transition, a character. If NULL, the name
+    #' is automatically generated
     #' @param ... named arguments specifying substitutions for the parameters
     #' used by this transition.
-    #' is automatically generated
     #' @return the name of the transition
     #' @details The formula can be specified by a formula, which has the form
     #' from -> to ~ rate or to <- from ~ rate
