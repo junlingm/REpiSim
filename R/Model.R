@@ -508,7 +508,7 @@ Model <- R6Class(
         stop(to, " is already defined")
 
       if (is.null(to))
-        return(self$delete.compartment(from))
+        return(self$delete(from))
       if (!is.name(to) && ! is.character(to))
         stop("Invalid name ", to)
       to = as.character(to)
