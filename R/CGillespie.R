@@ -63,7 +63,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
     ),
     # the C++ code for finding the next event and its event time
     middle = list(
-      "if (__total == 0 || isnan(__total)) {",
+      "if (__total == 0 || std::isnan(__total)) {",
       "  __result[0] = R_PosInf;",
       "  return __result;",
       "}",
