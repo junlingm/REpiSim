@@ -87,7 +87,7 @@ Simulator = R6Class(
       private$alias = list()
       for (n in names(subst)) {
         s = subst[[n]]
-        private$alias[[n]] = private$format.equation(list("=", as.name(n), s))
+        private$alias[[n]] = list("=", as.name(n), s)
         if (!is.null(attr(s, "compartment")))
           attr(private$alias[[n]], "compartment") = TRUE
       }

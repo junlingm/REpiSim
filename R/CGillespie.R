@@ -67,7 +67,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       "  __result[0] = R_PosInf;",
       "  return __result;",
       "}",
-      "__result[0] = __t + exp_rand()/__total;",
+      "__result[0] = t + exp_rand()/__total;",
       "double __p = unif_rand() * __total;",
       "size_t __transition = 0;",
       "for (; __rate[__transition] <= __p; ++ __transition);"
@@ -144,17 +144,22 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
              "\n", indent, "}")
     },
 
-    # format the substitution calculations as C++ statements.
-    format.substitution = function(S) {
-      lapply(names(S), function(var) {
-        private$assign(var, private$cpp(S[[var]]), "double")
-      })
+    # format an calculations as C++ statements.
+    format.equation = function(eq) {
+      var = eq[[2]]
+      if (is.call(var)) {
+        if (var[[1]] != "'")
+          stop("Invalid equation ", eq)
+        var = as.name(paste0("_d_", var[[2]]))
+      }
+      value = private$cpp(eq[[3]])
+      private$assign(var, value, "double")
     },
     
     # format the access to a named vector as a C++ statement
     format.var = function(S, name) {
       lapply(1:length(S), function(i) {
-        private$assign(S[[i]], private$array(name, i-1), "double")
+        private$assign(S[[i]], private$array(paste0("__", name), i-1), "double")
       })
     },
     
@@ -198,8 +203,6 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
     # build the C++ program for simulating a single event
     build = function(model) {
       l = c(
-        private$format.var(model$compartments, "__y"),
-        private$format.var(model$parameters, "__parms"),
         private$format.substitution(),
         private$result,
         private$format.rate(model$transitions),
@@ -207,7 +210,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
         private$format.transition(model$transitions),
         "return(__result);"
       )
-      paste0("inline cpp11::doubles step(double __t, cpp11::doubles __y, cpp11::doubles __parms) ",
+      paste0("inline cpp11::doubles step(double t, cpp11::doubles __y, cpp11::doubles __parms) ",
              private$block(l, ""))
     },
     
