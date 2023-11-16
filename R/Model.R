@@ -12,11 +12,11 @@ letter.label = function(n, enclosed = c("(", ")")) {
 #' R6 class representing a mathematical model.
 #' 
 #' A mathematical model is described by a system of ODEs. The state variables
-#' are called compartments, and the equations gives the rate of change (i.e.,
-#' the time derivatives of the states). The equations are specified by
+#' are called compartments, and the equations give the rate of change (i.e.,
+#' the time derivatives of the states). An equation is specified by an
 #' R formula, the parameters are automatically extracted. A model can then
-#' be used to construct numerical simulations or stochastic simulations,
-#' or be formatted as latex equations.
+#' be used to construct numerical or stochastic simulations, or be typeset
+#' as latex equations.
 #' 
 #' @docType class
 #' @export
