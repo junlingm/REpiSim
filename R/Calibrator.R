@@ -25,9 +25,27 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
+    simulate = function(pars, ic, parms) {
+      ic.filled = ic$value
+      k = length(ic$fit)
+      ic.filled[ic$fit] = pars[k]
+      pars.filled = parms$value
+      pars.filled[parms$fit] = pars[(k+1):length(parms)]
+      data = private$.simulator$simulate(private$.time, ic.filled, pars.filled, vars=private$.mapping)
+      if (private$.cumulative) {
+        l = list()
+        n = names(data)
+        for (col in 2:nrow(data)) {
+          l[[n[[col]]]] = diff(data[,col])
+        }
+        as.data.frame(l)
+      } else data[,-1]
+    },
+    
     ## The actual calibration is done in this function.
     ## This method Must be implemented by subclasses.
     .calibrate = function(pars, intial.values, parms, ...) {
+      NULL
     }
   ),
   
@@ -45,8 +63,15 @@ Calibrator <- R6::R6Class(
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
-    initialize = function(model, time, data, ..., cumulative=FALSE, mapping=NULL) {
+    initialize = function(model, time, data, ..., cumulative=FALSE, mapping=character()) {
       m = model$clone(deep=TRUE)
+      if (!is.data.frame(data))
+        stop("data must be a data.frame object")
+      extra = setdiff(names(mapping), names(data))
+      if (length(extra) > 0)
+        stop("data column", if(length(extra)==1) "" else "s", 
+             " does not exist: ", paste(extra, collapse=", "))
+      private$.mapping = mapping
       private$.cumulative = cumulative
       if (is.numeric(time)) {
         if (cumulative) {
@@ -63,7 +88,7 @@ Calibrator <- R6::R6Class(
         stop("the time should have one more point than the length of the data, to calculate the difference from teh cumulative curves")
       else private$.time = data[[time]]
       args = as.list(substitute(list(...))[-1])
-      if (length(args) == 0)
+      if (length(args) == 0 && length(mapping) == 0)
         stop("no mapping from data to model variables")
       for (a in args) {
         if (as.character(a[[1]]) != "~")
@@ -85,9 +110,9 @@ Calibrator <- R6::R6Class(
           l[[var]] = a[[3]]
           m$where(pairs = l)
         }
-        if (!is.null(private$.mapping[[col]]))
+        if (!is.na(private$.mapping[col]))
           stop("redefining mapping for data column ", col)
-        private$.mapping[[col]] = var
+        private$.mapping[col] = var
       }
       private$.model = m
       private$.simulator = private$simulator(m)
@@ -115,7 +140,8 @@ Calibrator <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing initial value", if(length(miss)==1) "" else "s", ": ", 
              paste(miss, collapse=", "))
-      pars = n[is.na(initial.values)]
+      indices.ic = which(is.na(initial.values))
+      pars = n[indices.ic]
       n = names(parms)
       if (is.null(n) || any(n=="")) 
         stop("parameter values must be named")
@@ -127,8 +153,12 @@ Calibrator <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing model parameter", if(length(miss)==1) "" else "s", ": ", 
              paste(miss, collapse=", "))
-      pars = c(pars, n[is.na(parms)])
-      private$.calibrate(pars, initial.values, parms, ...)
+      indices.par = which(is.na(parms))
+      pars = c(pars, n[indices.par])
+      private$.calibrate(pars, 
+                         list(value=initial.values, fit=indices.ic),
+                         list(value=parms, fit=indices.par), 
+                         ...)
     }
   )
 )
