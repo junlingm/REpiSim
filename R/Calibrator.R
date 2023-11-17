@@ -42,6 +42,11 @@ Calibrator <- R6::R6Class(
       } else data[,-1]
     },
     
+    ## interpret the results of calibration
+    interpret = function(results) {
+      NULL
+    },
+    
     ## The actual calibration is done in this function.
     ## This method Must be implemented by subclasses.
     .calibrate = function(pars, intial.values, parms, ...) {
@@ -155,10 +160,11 @@ Calibrator <- R6::R6Class(
              paste(miss, collapse=", "))
       indices.par = which(is.na(parms))
       pars = c(pars, n[indices.par])
-      private$.calibrate(pars, 
-                         list(value=initial.values, fit=indices.ic),
-                         list(value=parms, fit=indices.par), 
-                         ...)
+      x = private$.calibrate(pars, 
+                             list(value=initial.values, fit=indices.ic),
+                             list(value=parms, fit=indices.par), 
+                             ...)
+      private$interpret(x)
     }
   )
 )
