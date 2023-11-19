@@ -1,3 +1,4 @@
+# A maximum likelihood calibrator using the bbmle package
 MLE <- R6Class(
   "MLE",
   inherit = Optimizer,
