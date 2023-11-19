@@ -86,3 +86,84 @@ NBinom <- R6Class(
     }
   )
 )
+
+#' The normal distribution. 
+#' 
+#' @details This distribution has one parameter named "size" in addition to the
+#' mean, which is the size parameter in stats::dnbinom
+Normal <- R6Class(
+  "Normal",
+  inherit = Distribution,
+  
+  private = list(
+    sd = NULL
+  ),
+  
+  public = list(
+    #' constructor
+    #' @param sd the standard deviation
+    #' @details 
+    #' If sd is a number, it is used as a fixed standard deviation, the distribution
+    #' has no parameter.
+    #' 
+    #' If sd is "fixed", the standard deviation is fixed, which is specified by
+    #' the distribution parameter sd.
+    #' 
+    #' If sd is "proportional", the standard deviation is proportional to the mean,
+    #' the coefficient is specified by a distribution parameter coef
+    initialize = function(sd=c("fixed", "proportional")) {
+      if (is.numeric(sd)) {
+        private$sd = abs(sd)
+      } else {
+        private$sd = if (missing(sd)) "fixed" else
+          match.arg(sd[[1]], c("fixed", "proportional"))
+      }
+    },
+    
+    likelihood = function() {
+      if (is.numeric(private$sd)) {
+        list(
+          par = NULL,
+          logL = function(x, mean) {
+            if (any(!is.finite(mean))) -Inf else {
+              sum(dnorm(x, mean=mean, sd=private$sd, log=TRUE))
+            }
+          }
+        )
+      } else {
+        if (private$sd == "fixed") {
+          list(
+            par = "sd",
+            logL = function(x, mean, sd) {
+              if (any(!is.finite(mean)) || sd <=0 ) -Inf else {
+                sum(dnorm(x, mean=mean, sd=sd, log=TRUE))
+              }
+            }
+          )
+        } else {
+          list(
+            par = "coef",
+            logL = function(x, mean, coef) {
+              if (any(!is.finite(mean)) || coef <= 0) -Inf else {
+                sum(dnorm(x, mean=mean, sd=coef*abs(mean), log=TRUE))
+              }
+            }
+          )
+        }
+      }
+    },
+    
+    #' Provides a function to compute the log probability 
+    #' @param mean the mean of the normal distribution
+    #' @param sd the standard deviation of the normal distribution
+    #' @return a function with the formal function(x), which returns the log prior
+    #' probability for a parameter value x
+    prior = function(mean, sd) {
+      if (missing(sd)) {
+        if (!is.numeric(private$sd)) stop("sd must be a number")
+        sd = private$sd
+      }
+      function(x) dnorm(x, mean, sd)
+    }
+  )
+)
