@@ -25,12 +25,17 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    simulate = function(pars, ic, parms) {
+    ## check parameters. return the names of parameters to be fitted
+    parameters = function() {
+      private$.model$parameters
+    },
+
+    simulate = function(fit, ic, parms) {
       ic.filled = ic$value
-      k = length(ic$fit)
-      ic.filled[ic$fit] = pars[k]
-      pars.filled = parms$value
-      pars.filled[parms$fit] = pars[(k+1):length(parms)]
+      ic.filled[ic$fit] = fit[ic$fit]
+      pars.filled = parms$value[private$.model$parameters]
+      parms.fit = intersect(parms$fit, private$.model$parameters)
+      pars.filled[parms.fit] = fit[parms.fit]
       data = private$.simulator$simulate(private$.time, ic.filled, pars.filled, vars=private$.mapping)
       if (private$.cumulative) {
         l = list()
@@ -145,12 +150,11 @@ Calibrator <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing initial value", if(length(miss)==1) "" else "s", ": ", 
              paste(miss, collapse=", "))
-      indices.ic = which(is.na(initial.values))
-      pars = n[indices.ic]
+      pars.ic = n[is.na(initial.values)]
       n = names(parms)
       if (is.null(n) || any(n=="")) 
         stop("parameter values must be named")
-      extra = setdiff(n, private$.model$parameters)
+      extra = setdiff(n, private$parameters())
       if (length(extra) > 0)
         stop("parameter", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
@@ -158,11 +162,12 @@ Calibrator <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing model parameter", if(length(miss)==1) "" else "s", ": ", 
              paste(miss, collapse=", "))
-      indices.par = which(is.na(parms))
-      pars = c(pars, n[indices.par])
+      pars.parms = n[which(is.na(parms))]
+      pars = c(pars.ic, pars.parms)
       x = private$.calibrate(pars, 
-                             list(value=initial.values, fit=indices.ic),
-                             list(value=parms, fit=indices.par), 
+                             list(value=initial.values, fit=pars.ic),
+                             list(value=parms[private$.model$parameters], 
+                                  fit=intersect(pars.parms, private$.model$parameters)), 
                              ...)
       private$interpret(x)
     }
