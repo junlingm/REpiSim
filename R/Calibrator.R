@@ -155,7 +155,7 @@ Calibrator <- R6::R6Class(
       pars = c(pars.ic, pars.parms)
       x = private$.calibrate(pars, 
                              list(value=initial.values, fit=pars.ic),
-                             list(value=parms[model.parms], 
+                             list(value=parms,
                                   fit=intersect(pars.parms, private$.model$parameters)), 
                              ...)
       private$interpret(x)
