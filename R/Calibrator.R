@@ -25,11 +25,6 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    ## check parameters. return the names of parameters to be fitted
-    parameters = function() {
-      private$.model$parameters
-    },
-
     simulate = function(fit, ic, parms) {
       ic.filled = ic$value
       ic.filled[ic$fit] = fit[ic$fit]
@@ -151,11 +146,11 @@ Calibrator <- R6::R6Class(
       n = names(parms)
       if (is.null(n) || any(n=="")) 
         stop("parameter values must be named")
-      extra = setdiff(n, private$parameters())
+      extra = setdiff(n, self$parameters)
       if (length(extra) > 0)
         stop("parameter", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
-      pars.parms = setdiff(private$parameters(), n)
+      pars.parms = setdiff(self$parameters, n)
       model.parms = intersect(n, private$.model$parameters)
       pars = c(pars.ic, pars.parms)
       x = private$.calibrate(pars, 
@@ -164,6 +159,13 @@ Calibrator <- R6::R6Class(
                                   fit=intersect(pars.parms, private$.model$parameters)), 
                              ...)
       private$interpret(x)
+    }
+  ),
+  
+  active = list(
+    #' @field the names of all parameters
+    parameters = function() {
+      private$.model$parameters
     }
   )
 )

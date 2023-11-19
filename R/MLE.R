@@ -5,10 +5,6 @@ MLE <- R6Class(
   private = list(
     .likelihood = NULL,
     
-    parameters = function() {
-      c(private$.model$parameters, private$.likelihood$par)
-    },
-    
     objective = function(pars, initial.values, parms) {
       pars.l = pars[private$.likelihood$par]
       pars.l = pars.l[!is.na(pars.l)]
@@ -86,6 +82,13 @@ MLE <- R6Class(
         stop("likelihood must be a Distribution object")
       private$.likelihood = likelihood$likelihood()
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
+    }
+  ),
+  
+  active = list(
+    #' @field the names of all parameters
+    parameters = function() {
+      c(private$.model$parameters, private$.likelihood$par)
     }
   )
 )
