@@ -9,6 +9,7 @@ MLE <- R6Class(
     objective = function(pars, initial.values, parms) {
       pars.l = pars[private$.likelihood$par]
       pars.l = pars.l[!is.na(pars.l)]
+      if (length(pars.l) == 0) pars.l = parms$value[private$.likelihood$par]
       logL = private$.likelihood$logL
       x = private$simulate(pars, initial.values, parms)
       if (is.data.frame(x)) {
@@ -50,14 +51,6 @@ MLE <- R6Class(
         }
         as.data.frame(cbind(mean=coef(result), ci))
       } else stop("Error (", details$convergence, "): ", details$message)
-    },
-    
-    .calibrate = function(pars, ...) {
-      miss = setdiff(private$.likelihood$par, pars)
-      if (length(miss) > 0)
-        stop("missing distrbution parameter", if (length(miss)==1) "" else "s", 
-             ":", miss)
-      super$.calibrate(pars, ...)
     }
   ),
   
