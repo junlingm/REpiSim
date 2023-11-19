@@ -24,4 +24,9 @@ Collate:
   RGillespie.R
   CGillespie.R
   flowchart.R
+  Calibrator.R
+  Optimizer.R
+  LeastSquare.R
+  Distribution.R
+  MLE.R
 RoxygenNote: 7.2.3
