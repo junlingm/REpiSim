@@ -1,16 +1,12 @@
-LeastSquare <- R6Class(
+LeastSquare <- R6::R6Class(
   "LeastSquare",
-  inherit = Calibrator,
+  inherit = Optimizer,
   
   private = list(
     # whether to fit in log scale
     .log = FALSE,
     
-    simulator = function(model) {
-      ODE$new(model)
-    },
-    
-    lsq = function(pars, initial.values, parms) {
+    objective = function(pars, initial.values, parms) {
       x = private$simulate(pars, initial.values, parms)
       if (private$.log) x = log(x)
       if (is.data.frame(x)) {
@@ -20,22 +16,9 @@ LeastSquare <- R6Class(
       } else sum((x-private$.data[1])^2)
     },
     
-    .calibrate = function(pars, initial.values, parms, guess, ...) {
-      if (!is.numeric(guess) || any(is.na(guess)))
-        stop("invalid initial values")
-      ng = names(guess)
-      if (is.null(ng) || any(ng=="")) 
-        stop("initial guesses must be named")
-      extra = setdiff(pars, ng)
-      if (length(extra) > 0)
-        stop("variable", if(length(extra)==1) "" else "s", 
-             " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(ng, pars)
-      if (length(miss) > 0)
-        stop("missing initial guess", if(length(miss)==1) "" else "es", ": ", 
-             paste(miss, collapse=", "))
-      optim(guess[pars], private$lsq, hessian=TRUE, 
-            initial.values=initial.values, parms=parms)
+    optimizer = function(pars, initial.values, parms, ...) {
+      optim(pars, private$objective, hessian=TRUE, 
+            initial.values=initial.values, parms=parms, ...)
     },
     
     interpret = function(result) {
@@ -72,20 +55,6 @@ LeastSquare <- R6Class(
       private$.log = log
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
       if (log) private$.data = base::log(private$.data)
-    },
-    
-    #' Calibrate the model to data
-    #' 
-    #' @param initial.values the initial values for the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param parms the parameter values of the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param guess the initial guess of the parameters to be fitted
-    #' @param ... extra arguments to be passed to calibrators
-    calibrate = function(initial.values, parms, guess, ...) {
-      super$calibrate(initial.values, parms, guess, ...)
     }
   )
 )
