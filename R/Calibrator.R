@@ -33,9 +33,8 @@ Calibrator <- R6::R6Class(
     simulate = function(fit, ic, parms) {
       ic.filled = ic$value
       ic.filled[ic$fit] = fit[ic$fit]
-      pars.filled = parms$value[private$.model$parameters]
-      parms.fit = intersect(parms$fit, private$.model$parameters)
-      pars.filled[parms.fit] = fit[parms.fit]
+      pars.filled = parms$value
+      pars.filled[parms$fit] = fit[parms$fit]
       data = private$.simulator$simulate(private$.time, ic.filled, pars.filled, vars=private$.mapping)
       if (private$.cumulative) {
         l = list()
@@ -139,6 +138,7 @@ Calibrator <- R6::R6Class(
     #' estimated must contain a finite value.
     #' @param ... extra arguments to be passed to calibrators
     calibrate = function(initial.values, parms, ...) {
+      initial.values = initial.values[!is.na(initial.values)]
       n = names(initial.values)
       if (is.null(n) || any(n=="")) 
         stop("initial values must be named")
@@ -146,11 +146,8 @@ Calibrator <- R6::R6Class(
       if (length(extra) > 0)
         stop("variable", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(private$.model$compartments, n)
-      if (length(miss) > 0)
-        stop("missing initial value", if(length(miss)==1) "" else "s", ": ", 
-             paste(miss, collapse=", "))
-      pars.ic = n[is.na(initial.values)]
+      pars.ic = setdiff(private$.model$compartments, n)
+      parms = parms[!is.na(parms)]
       n = names(parms)
       if (is.null(n) || any(n=="")) 
         stop("parameter values must be named")
@@ -158,15 +155,12 @@ Calibrator <- R6::R6Class(
       if (length(extra) > 0)
         stop("parameter", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(private$.model$parameters, n)
-      if (length(miss) > 0)
-        stop("missing model parameter", if(length(miss)==1) "" else "s", ": ", 
-             paste(miss, collapse=", "))
-      pars.parms = n[which(is.na(parms))]
+      pars.parms = setdiff(private$parameters(), n)
+      model.parms = intersect(n, private$.model$parameters)
       pars = c(pars.ic, pars.parms)
       x = private$.calibrate(pars, 
                              list(value=initial.values, fit=pars.ic),
-                             list(value=parms[private$.model$parameters], 
+                             list(value=parms[model.parms], 
                                   fit=intersect(pars.parms, private$.model$parameters)), 
                              ...)
       private$interpret(x)
