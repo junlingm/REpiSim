@@ -1,6 +1,6 @@
 #' A subclass of Calibrator that uses an optimizer and an initial guess.
 Optimizer <- R6::R6Class(
-  "CalibratorWithInitialGuess",
+  "Optimizer",
   inherit = Calibrator,
   
   private = list(
