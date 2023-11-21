@@ -29,4 +29,5 @@ Collate:
   LeastSquare.R
   Distribution.R
   MLE.R
+  Bayesian.R
 RoxygenNote: 7.2.3
