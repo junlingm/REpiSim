@@ -8,7 +8,7 @@ Baysian <- R6::R6Class(
       ODE$new(model)
     },
     
-    fit = function(priors, initial.values, parms, ...) {
+    fit = function(priors, guess, initial.values, parms, ...) {
       stop("must be implemented by subclasses")
     },
     
@@ -26,7 +26,7 @@ Baysian <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing prior", if(length(miss)==1) "" else "es", ": ", 
              paste(miss, collapse=", "))
-      private$fit(priors, initial.values=initial.values, parms=parms, ...)
+      private$fit(priors, guess, initial.values=initial.values, parms=parms, ...)
     }
   ),
   
