@@ -27,7 +27,7 @@ Collate:
   Calibrator.R
   Optimizer.R
   LeastSquare.R
-  Distribution.R
+  Likelihood.R
   MLE.R
   Bayesian.R
 RoxygenNote: 7.2.3
