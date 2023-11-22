@@ -1,3 +1,16 @@
+likelihood = function(likelihood, data, simulate, pars, initial.values, parms) {
+  pars.l = pars[likelihood$par]
+  pars.l = pars.l[!is.na(pars.l)]
+  if (length(pars.l) == 0) pars.l = parms$value[likelihood$par]
+  logL = likelihood$logL
+  x = simulate(pars, initial.values, parms)
+  if (is.data.frame(x)) {
+    -sum(sapply(1:ncol(x), function(i) {
+      logL(data[,i], x[,i], pars.l)
+    }))
+  } else -logL(data[,1], x, pars.l)
+}
+
 #' A maximum likelihood calibrator using the bbmle package
 MLE <- R6Class(
   "MLE",
@@ -7,16 +20,8 @@ MLE <- R6Class(
     .likelihood = NULL,
     
     objective = function(pars, initial.values, parms) {
-      pars.l = pars[private$.likelihood$par]
-      pars.l = pars.l[!is.na(pars.l)]
-      if (length(pars.l) == 0) pars.l = parms$value[private$.likelihood$par]
-      logL = private$.likelihood$logL
-      x = private$simulate(pars, initial.values, parms)
-      if (is.data.frame(x)) {
-        -sum(sapply(1:ncol(x), function(i) {
-          logL(private$.data[,i], x[,i], pars.l)
-        }))
-      } else -logL(private$.data[,1], x, pars.l)
+      likelihood(private$.likelihood, private$.data, private$simulate, 
+                 pars, initial.values, parms)
     },
     
     optimizer = function(pars, initial.values, parms, neglogL, ...) {
@@ -62,7 +67,7 @@ MLE <- R6Class(
     #' character value giving the name of the column in data that corresponds 
     #' to time.
     #' @param data a data.frame object containign the data for the calibration
-    #' @param likelihood a Distribution object specify the type of likelihood
+    #' @param likelihood a Lieklihood object specify the type of likelihood
     #' @param ... each argument is a formula defining the maps between 
     #' the data columns and the model variables. Please see the details section.
     #' @param cumulative whether the data is cumulative
@@ -72,9 +77,9 @@ MLE <- R6Class(
     #' expression to calculate from the model variables.)
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
       library(bbmle)
-      if (!"Distribution" %in% class(likelihood)) 
-        stop("likelihood must be a Distribution object")
-      private$.likelihood = likelihood$likelihood()
+      if (!"Likelihood" %in% class(likelihood)) 
+        stop("likelihood must be a Likelihood object")
+      private$.likelihood = likelihood
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     }
   ),
