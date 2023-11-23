@@ -46,25 +46,39 @@ Expression <- R6::R6Class(
   ),
   
   public = list(
+    #' constructor
+    #' 
+    #' @param expr the expression to parse
     initialize = function(expr) {
       private$.expr = expr
       private$extract(expr)
     },
     
-    # perform a substitute that replaces a given variable name 
-    # in the formula by an expression, given in the named list subs
+    #' Perform a substitute
+    #' 
+    #' @param subs a named list of substitutions
+    #' @return an expression with the substitution
+    #' @details For each name in the list, the variable with that name in the
+    #' expression is replaced by the corresponding value in the list.
     substitute = function(subs) {
       private$do.substitute(private$.expr, subs)
     }
   ),
   
   active = list(
+    #' @field parms the parameters used int he expression
     parms = function() {
       private$.parms
     },
     
+    #' @field functions the function named used int he expression
     functions = function() {
       private$.functions
+    },
+    
+    #' @field expr the original expression
+    expr = function() {
+      private$.expr
     }
   )
 )
