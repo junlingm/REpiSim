@@ -32,4 +32,5 @@ Collate:
   MLE.R
   Prior.R
   Bayesian.R
+  Metrop.R
 RoxygenNote: 7.2.3
