@@ -12,8 +12,9 @@ Prior = R6::R6Class(
     initialize = function(dist) {
       if (!is.call(dist))
         stop("dist must be a function call")
-      dist["log"]=TRUE
-      private$.call = dist
+      l = as.list(dist)
+      l = c(l[[1]], NA, l[-1], log=TRUE)
+      private$.call = as.call(l)
       if (!is.call(dist)) 
         stop("dist must be a function call")
       e = Expression$new(dist)
@@ -21,7 +22,9 @@ Prior = R6::R6Class(
     },
     
     log.density = function(x, par) {
-      eval(private$.call, envir = if (length(private$.parms)==0) NULL else as.list(par))
+      call = private$.call
+      call[2] = x
+      eval(call, envir = if (length(private$.parms)==0) NULL else as.list(par))
     }
   ),
   
