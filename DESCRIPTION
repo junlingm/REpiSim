@@ -16,6 +16,7 @@ Suggests:
   deSolve,
   cpp11
 Collate:
+  Expression.R
   Model.R
   TexFormatter.R
   Simulator.R

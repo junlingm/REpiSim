@@ -59,54 +59,6 @@ Model <- R6Class(
       }
     },
 
-    # perform a substitute that replaces a given variable name 
-    # in the formula by an expression, given in the named list subs
-    substitute = function(formula, subs) {
-      if (is.name(formula)) {
-        name = as.character(formula)
-        return(if (!is.null(subs[[name]])) subs[[name]] else formula)
-      }
-      if (is.call(formula)) {
-        name = as.character(formula[[1]])
-        if (!is.null(subs[[name]])) 
-          formula[[1]] = as.name(subs[[name]])
-        n = length(as.list(formula))
-        for (i in 2:n)
-          formula[[i]] = private$substitute(formula[[i]], subs)
-      }
-      formula
-    },
-    
-    # this function extracts all parameters (names) used in the 
-    # given formula which name is name. It returns a named list, where the name is 
-    # the variable name, and the value is a list containing the 
-    # name and if the name is a function, the alist of the function
-    # definition. The argument parameters gives the initial value 
-    # where an empty list means that no parameters have been found yet.
-    extract.parameters = function(name, formula, parameters = list()) {
-      new = function(var, definition = NULL) {
-        p = private$.parameters[[var]]
-        if (is.null(p)) {
-          list(name=var, defined = name, definition = definition) 
-        } else {
-          p$defined = c(p$defined, name)
-          p
-        }
-      }
-      if (is.name(formula)) {
-        var = as.character(formula)
-        if (var != "t" && is.null(parameters[[formula]]))
-          parameters[[var]] = new(var)
-      } else if (is.call(formula)) {
-        var = as.character(formula[[1]])
-        if (! var %in% private$.external.functions)
-          private$.external.functions = c(private$.external.functions, var)
-        for (t in as.list(formula)[-1])
-          parameters = private$extract.parameters(name, t, parameters)
-      }
-      parameters
-    },
-    
     # when a formula which name is given by owner is deleted, 
     # the parameters that is used in it will have the dependence 
     # on the formula removed. if there it is used in no formula
@@ -130,18 +82,16 @@ Model <- R6Class(
     # and extract parameters is formula is NULL, then it is removed
     # if the formula with the given name already exists, it is redefined
     define.formula = function(name, formula) {
-      pars = private$extract.parameters(name, formula)
-      for (p in pars) {
-        var = p$name
-        if (!is.null(p$definition)) {
-          if (!is.null(private$.compartments[[var]]))
-            stop("Redefining the compartment ", var, " as a function")
-          if (!is.null(private$.where[[var]]))
-            stop("Redefining the substitution ", var, " as a function")
-          if (!is.null(private$.parameters[[var]]))
-            stop("Redefining the parameter ", var, " as a function")
-        }
+      e = Expression$new(formula)
+      for (f in e$functions) {
+        if (!is.null(private$.compartments[[f]]))
+          stop("Redefining the compartment ", f, " as a function")
+        if (!is.null(private$.where[[f]]))
+          stop("Redefining the substitution ", f, " as a function")
+        if (!is.null(private$.parameters[[f]]))
+          stop("Redefining the parameter ", f, " as a function")
       }
+      private$.external.functions = union(private$.external.functions, e$functions)
       # are we redefining the formula or removing the formula?
       # if so, we remove the old definition
       if (!is.null(private$.formula[[name]]) || is.null(formula)) {
@@ -150,12 +100,17 @@ Model <- R6Class(
       }
       private$.formula[[name]] = list(formula = formula)
       # define parameters
-      for (p in pars) {
-        var = p$name
+      for (var in e$parms) {
         if (!is.null(private$.compartments[[var]]) || !is.null(private$.where[[var]])) {
           if (var != name)
             private$.formula[[name]]$depend = c(private$.formula[[name]]$depend, var)
-        } else private$.parameters[[var]] = p
+        } else {
+          def = private$.parameters[[var]]
+          if (is.null(def))
+            def = list(name = var)
+          def$defined = c(def$defined, name)
+          private$.parameters[[var]] = def
+        }
       }
     },
     
@@ -205,7 +160,8 @@ Model <- R6Class(
       private$.formula = lapply(
         private$.formula,
         function(f) {
-          f$formula = private$substitute(f$formula, subs=subs)
+          e = Expression$new(f$formula)
+          f$formula = e$substitute(subs=subs)
           f$depend[f$depend == from] = to
           f
         }
