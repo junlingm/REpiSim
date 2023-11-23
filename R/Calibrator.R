@@ -32,12 +32,8 @@ Calibrator <- R6::R6Class(
       pars.filled[parms$fit] = fit[parms$fit]
       data = private$.simulator$simulate(private$.time, ic.filled, pars.filled, vars=private$.mapping)
       if (private$.cumulative) {
-        l = list()
-        n = names(data)
-        for (col in 2:nrow(data)) {
-          l[[n[[col]]]] = diff(data[,col])
-        }
-        as.data.frame(l)
+        if (ncol(data) == 2) diff(data[,2]) else
+          as.data.frame(lapply(data[, -1], diff))
       } else data[,-1]
     },
     
