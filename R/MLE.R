@@ -5,10 +5,10 @@ likelihood = function(likelihood, data, simulate, pars, initial.values, parms) {
   logL = likelihood$logL
   x = simulate(pars, initial.values, parms)
   if (is.data.frame(x)) {
-    -sum(sapply(1:ncol(x), function(i) {
+    sum(sapply(1:ncol(x), function(i) {
       logL(data[,i], x[,i], pars.l)
     }))
-  } else -logL(data[,1], x, pars.l)
+  } else logL(data[,1], x, pars.l)
 }
 
 #' A maximum likelihood calibrator using the bbmle package
@@ -20,7 +20,7 @@ MLE <- R6Class(
     .likelihood = NULL,
     
     objective = function(pars, initial.values, parms) {
-      likelihood(private$.likelihood, private$.data, private$simulate, 
+      -likelihood(private$.likelihood, private$.data, private$simulate, 
                  pars, initial.values, parms)
     },
     
