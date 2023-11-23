@@ -67,7 +67,7 @@ Simulator = R6Class(
     # to the data frame returned from `run`.
     .simulate = function(t, y0, parms, alias, ...) {
       data = private$run(t, y0[private$compartments], parms[private$parameters], ...)
-      if (!alias) data else
+      d = if (!alias) data else
         as.data.frame(t(apply(data, 1, private$f.alias, parms=parms)))
     }
   ),
@@ -87,7 +87,7 @@ Simulator = R6Class(
       private$alias = list()
       for (n in names(subst)) {
         s = subst[[n]]
-        private$alias[[n]] = list("=", as.name(n), s)
+        private$alias[[n]] = list(as.name("<-"), as.name(n), s)
         if (!is.null(attr(s, "compartment")))
           attr(private$alias[[n]], "compartment") = TRUE
       }
@@ -104,7 +104,7 @@ Simulator = R6Class(
       body = call(
         "with", 
         quote(c(as.list(parms), as.list(row))),
-        as.call(c(as.name("{"), private$alias, as.call(col)))
+        as.call(c(as.name("{"), lapply(private$alias, as.call), as.call(col)))
       )
       private$f.alias = as.function(c(alist(row=, parms=), body))
     },
