@@ -4,12 +4,18 @@ Baysian <- R6::R6Class(
   inherit = Calibrator,
   
   private = list(
+    .priors = NULL,
+    
     simulator = function(model) {
       ODE$new(model)
     },
     
-    fit = function(priors, guess, initial.values, parms, ...) {
+    fit = function(guess, initial.values, parms, ...) {
       stop("must be implemented by subclasses")
+    },
+    
+    prior = function(formula) {
+      Prior$new(formula)
     },
     
     .calibrate = function(pars, initial.values, parms, priors, guess, ...) {
@@ -26,7 +32,8 @@ Baysian <- R6::R6Class(
       if (length(miss) > 0)
         stop("missing prior", if(length(miss)==1) "" else "es", ": ", 
              paste(miss, collapse=", "))
-      private$fit(priors, guess, initial.values=initial.values, parms=parms, ...)
+      private$.priors = lapply(priors, private$prior)
+      private$fit(guess, initial.values=initial.values, parms=parms, ...)
     }
   ),
   

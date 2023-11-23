@@ -30,5 +30,6 @@ Collate:
   LeastSquare.R
   Likelihood.R
   MLE.R
+  Prior.R
   Bayesian.R
 RoxygenNote: 7.2.3
