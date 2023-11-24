@@ -85,6 +85,7 @@ Metrop <- R6::R6Class(
       c(private$.model$parameters, private$.likelihood$par)
     },
     
+    #' @field The samples of the posterior distribution
     samples = function() {
       as.mcmc(private$.details$batch)
     }
