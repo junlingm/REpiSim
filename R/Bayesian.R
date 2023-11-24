@@ -52,6 +52,10 @@ Baysian <- R6::R6Class(
     #' @param ... extra arguments to be passed to calibrators
     calibrate = function(initial.values, parms, priors, guess, ...) {
       super$calibrate(initial.values, parms, priors, guess, ...)
+    },
+    
+    samples = function() {
+      NULL
     }
   )
 )

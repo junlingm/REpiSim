@@ -5,7 +5,6 @@ Metrop <- R6::R6Class(
   
   private = list(
     .likelihood = NULL,
-    .result = NULL,
     
     logL = function(pars, initial.values, parms, names) {
       n = names(private$.priors)
@@ -18,17 +17,27 @@ Metrop <- R6::R6Class(
         }))
     },
     
-    fit = function(guess, initial.values, parms, ...) {
-      x = metrop(private$logL, guess, ..., 
+    metrop = function(logL, guess, initial.values, parms, ...) {
+      x = metrop(logL, guess, ..., 
                  initial.values=initial.values, 
                  parms=parms, 
                  names=names(guess))
-      private$.result = list(x=x, initial.values=initial.values, parms=parms)
+      colnames(x$batch) = names(guess)
+      x$initial.values=initial.values
+      x$parms=parms
       x
     },
     
+    fit = function(guess, initial.values, parms, ...) {
+      private$metrop(private$logL, guess, initial.values, parms, ...)
+    },
+    
     interpret = function(result) {
-      result
+      s = summary(as.mcmc(result$batch), quantiles=c(0.025, 0.975))
+      as.data.frame(cbind(
+        mean = s$statistics[,"Mean"],
+        s$quantiles
+      ))
     }
   ),
   
@@ -50,6 +59,7 @@ Metrop <- R6::R6Class(
     #' expression to calculate from the model variables.)
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
       library(mcmc)
+      library(coda)
       if (!"Likelihood" %in% class(likelihood)) 
         stop("likelihood must be a Likelihood object")
       private$.likelihood = likelihood
@@ -57,14 +67,15 @@ Metrop <- R6::R6Class(
     },
     
     continue = function(...) {
-      if (is.null(private$.result))
+      if (is.null(private$.details))
         stop("was not run before")
-      x = metrop(private$.result$x, ..., 
-                 initial.values=private$.result$initial.values, 
-                 parms=private$.result$parms,
-                 names=names(private$.result$x$initial))
-      private$.result$x = x
-      private$interpret(x)
+      guess = private$.details$batch[nrow(private$.details$batch), ]
+      private$.details = private$metrop(
+        private$.details, 
+        guess=guess,
+        initial.values=private$.details$initial.values, 
+        parms=private$.details$parms, ...)
+      private$interpret(private$.details)
     }
   ),
   
@@ -72,6 +83,10 @@ Metrop <- R6::R6Class(
     #' @field the names of all parameters
     parameters = function() {
       c(private$.model$parameters, private$.likelihood$par)
+    },
+    
+    samples = function() {
+      as.mcmc(private$.details$batch)
     }
   )
 )

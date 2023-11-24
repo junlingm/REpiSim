@@ -19,6 +19,8 @@ Calibrator <- R6::R6Class(
     .mapping = NULL,
     # the time for simulation
     .time = NULL,
+    # the return value from the underlying algorithm
+    .details = NULL,
     
     ## create a simulator needed for calibration. Must be implemented by subclasses.
     simulator = function(model) {
@@ -149,12 +151,12 @@ Calibrator <- R6::R6Class(
       pars.parms = setdiff(self$parameters, n)
       model.parms = intersect(n, private$.model$parameters)
       pars = c(pars.ic, pars.parms)
-      x = private$.calibrate(pars, 
-                             list(value=initial.values, fit=pars.ic),
-                             list(value=parms,
-                                  fit=intersect(pars.parms, private$.model$parameters)), 
-                             ...)
-      private$interpret(x)
+      private$.details = private$.calibrate(
+        pars, 
+        list(value=initial.values, fit=pars.ic),
+        list(value=parms, fit=intersect(pars.parms, private$.model$parameters)),
+        ...)
+      private$interpret(private$.details)
     }
   ),
   
@@ -162,6 +164,10 @@ Calibrator <- R6::R6Class(
     #' @field the names of all parameters
     parameters = function() {
       private$.model$parameters
+    },
+    
+    details = function() {
+      private$.details
     }
   )
 )
