@@ -15,7 +15,7 @@ Arc(from, to, rate, label = NULL, edge = NULL)
 
 \item{label}{the property of the label, speficied by the Label function.}
 
-\item{edge}{ghe property for the arc, such as "bend left" (or "(") or "bend right" (or ")").}
+\item{edge}{the property for the arc, such as "bend left" (or "(") or "bend right" (or ")").}
 }
 \value{
 a character holding the tikz command for the property of the label

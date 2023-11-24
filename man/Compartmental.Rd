@@ -251,8 +251,7 @@ define or change a transition
 details.}
 
 \item{\code{...}}{named arguments specifying substitutions for the parameters
-used by this transition.
-is automatically generated}
+used by this transition.}
 
 \item{\code{from}}{the name of the compartment that the transition originates}
 
@@ -263,7 +262,8 @@ is automatically generated}
 \item{\code{percapita}}{whether the rate is per capita, i.e., the total rate would 
 be the per capita rate multiplied by the from compartment.}
 
-\item{\code{name}}{the name of the transition, a character. If NULL, the name}
+\item{\code{name}}{the name of the transition, a character. If NULL, the name
+is automatically generated}
 }
 \if{html}{\out{</div>}}
 }

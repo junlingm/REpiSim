@@ -2,7 +2,7 @@
 % Please edit documentation in R/TexFormatter.R
 \name{merge.list}
 \alias{merge.list}
-\title{A S3 method to merge to lists}
+\title{A S3 method to merge two lists}
 \usage{
 \method{merge}{list}(a, b)
 }
@@ -15,5 +15,5 @@
 a merged list
 }
 \description{
-A S3 method to merge to lists
+A S3 method to merge two lists
 }
