@@ -150,6 +150,7 @@ Compartmental <- R6Class(
     construct = function(representation) {
       if (!identical(representation$class, "Compartmental"))
         stop("invalid model file")
+      privte$.t = if (is.null(represnetation$.t)) as.name("t") else as.name(represnetation$.t)
       sapply(representation$compartments, self$compartment)
       sapply(representation$transitions, function(tr) do.call(self$transition, tr))
       self$where(pairs=representation$substitutions)
@@ -159,6 +160,8 @@ Compartmental <- R6Class(
   public = list(
     #' @description constructor
     #' @param ... the names of the compartment, or substitutions
+    #' @param t the name of the independent variable, either a name or a string
+    #' @param functions a list of functions to be used in this model
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
     #' @examples
@@ -167,8 +170,8 @@ Compartmental <- R6Class(
     #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
-    initialize = function(..., file = NULL) {
-      super$initialize(..., file=file)
+    initialize = function(..., t="t", functions = NULL, file = NULL) {
+      super$initialize(..., t=t, functions=functions, file=file)
     },
     
     #' @description define a compartment 
@@ -188,7 +191,9 @@ Compartmental <- R6Class(
       }
       if (!is.name(name) && !is.character(name))
         stop("invalid compartment name: ", name)
-      else if (!is.name(name)) name = as.name(name)
+      if (as.character(name) == private$.t)
+        stop(name, "is the independent variable, so cannot be used as a compartment name")
+      if (!is.name(name)) name = as.name(name)
       super$compartment(call("~", name, 0))
       invisible(self)
     },
@@ -282,6 +287,8 @@ Compartmental <- R6Class(
           r = to$rate
           to = to$compartment
         } else r = NULL
+        if (to == private$.t)
+          stop(to, " is the independent variable, and cannot be used as a compartment")
         from = private$parse.rate(formula[[3]])
         if (is.list(from)) {
           if (!is.null(r)) 
@@ -289,6 +296,8 @@ Compartmental <- R6Class(
           r = from$rate
           from = from$compartment
         }
+        if (to == private$.t)
+          stop(from, " is the independent variable, and cannot be used as a compartment")
         if (!is.null(r)) rate = r
       } else rate = substitute(rate)
 
@@ -356,6 +365,8 @@ Compartmental <- R6Class(
       if (length(where) > 0) for (i in 1:length(where)) {
         w = where[i]
         n = names(w)
+        if (n == private$.t)
+          stop(n, " is the independent variable, and thus cannot be redefined")
         if (is.null(n) || n== "")
           stop("meaningless definition ", w)
         if (!is.null(private$.where[[n]]))
@@ -409,6 +420,7 @@ Compartmental <- R6Class(
     representation = function() {
       list(
         class = "Compartmental",
+        .t = private$.t,
         compartments = self$compartments,
         transitions = self$transitions,
         substitutions = self$substitutions

@@ -27,6 +27,7 @@ Model <- R6Class(
     .parameters = list(),
     .where = list(),
     .formula = list(),
+    .t = NULL,
     # whether the compartment field of a substitution need to be recalculated
     recalc.compartment = FALSE,
     # external functions used by this model
@@ -104,7 +105,7 @@ Model <- R6Class(
         if (!is.null(private$.compartments[[var]]) || !is.null(private$.where[[var]])) {
           if (var != name)
             private$.formula[[name]]$depend = c(private$.formula[[name]]$depend, var)
-        } else {
+        } else if (var != private$.t) {
           def = private$.parameters[[var]]
           if (is.null(def))
             def = list(name = var)
@@ -212,9 +213,15 @@ Model <- R6Class(
     construct = function(representation) {
       if (!identical(representation$class, "Model"))
         stop("invalid model file")
+      private$.t = representation$.t
+      if (!is.character(private$.t) || private$.t == "") private$.t = "t"
       for (C in names(representation$compartments)) {
-        r = representation$compartments[[C]]
-        self$compartment(call("~", as.name(C), r))
+        if (C == ".t") {
+          private$.t = as.name(representation$compartments[[C]])
+        } else {
+          r = representation$compartments[[C]]
+          self$compartment(call("~", as.name(C), r))
+        }
       }
       self$where(pairs=representation$substitutions)
     }
@@ -236,6 +243,8 @@ Model <- R6Class(
     #' @param ... Each extra parameter is either passed to the `compartment` method
     #' if it is a formula with the form `name ~ value`, or passed to the
     #' `where` methods to define a substitution if it is a named expression.
+    #' @param t the name of the independent variable, either a name or a string
+    #' @param functions a list of functions to be used in this model
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
     #' @param .restricted a boolean variable indicating whether the ODE system
@@ -249,17 +258,26 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., file=NULL, .restricted=FALSE) {
+    initialize = function(..., t="t", functions=NULL, file=NULL, .restricted=FALSE) {
       self$restricted = .restricted
       if (!is.null(file)) private$load(file)
+      private$.t = if (is.null(t) || t == "") "t" else if (is.character(t)) t else
+        stop("Invalid independent variable name ", t)
       args = as.list(substitute(list(...)))[-1]
+      if (!is.null(functions)) {
+        nf = names(functions)
+        if (is.null(nf) || any(nf == ""))
+          stop("functions must be named")
+      }
+      if (length(functions) > 0) {
+        for (i in 1:length(functions))
+          self$attached.functions[[nf[i]]] = functions[[i]]
+      }
       ns = names(args)
       if (length(args) > 0) {
         for (i in 1:length(args)) {
           if (!is.null(ns) && ns[i] != "") {
-            if (is.call(args[[i]]) && args[[i]][[1]] == "function") {
-              self$attached.functions[[ns[i]]] = eval(args[[i]])
-            } else self$where(pairs = args[i])
+            self$where(pairs = args[i])
           } else self$compartment(args[[i]])
         }
       }
@@ -288,6 +306,8 @@ Model <- R6Class(
       if (!is.call(eq) || eq[[1]] != "~")
         stop("Invalid equation")
       name = as.character(eq[[2]])
+      if (name == private$.t)
+        stop(name, " is the independent variable, and so cannot be used as a dependent variable name")
       formula = eq[[3]]
       if (is.null(formula)) {
         self$delete(name)
@@ -356,6 +376,8 @@ Model <- R6Class(
 
       # define each substitution
       for (name in ns) {
+        if (name == private$.t)
+          stop(name, " is the independent variable, and so cannot be used as a parameter name")
         private$define.formula(name, defs[[name]])
         if (is.null(private$.where[[name]]))
           private$.where[[name]] = list(name=name, value=name)
@@ -399,6 +421,8 @@ Model <- R6Class(
       }
       if (!is.name(name) && !is.character(name))
         stop("invalid name ", name)
+      if (name == private$.t)
+        stop(name, " is the independent variable, and so cannot be deleted")
       if (!is.null(private$.compartments[[name]])) {
         private$.compartments[[name]] = NULL
         private$define.formula(paste0(".d.", name), NULL)
@@ -462,12 +486,18 @@ Model <- R6Class(
       from = as.character(from)
       if (!private$defined(from))
         stop(from, " is not defined")
-
+      if (from == private$.t) {
+        private$.t = as.name(from)
+        return(invisible(self))
+      }
+      
       if (is.null(to))
         return(self$delete(from))
       if (!is.name(to) && ! is.character(to))
         stop("Invalid name ", to)
       to = as.character(to)
+      if (to == private$.t)
+        stop(from, " cannot be renamed to the independent variable")
       if (private$defined(to))
         stop(to, " is already defined")
       
@@ -479,7 +509,7 @@ Model <- R6Class(
 
     #' @description format the class for printing
     format = function() {
-      l = "Model: "
+      l = c("Model:", paste("independent variable:", private$.t))
       if (length(private$.compartments) > 0) {
         l = c(l, "  Compartments:")
         for (c in private$.compartments) {
@@ -556,6 +586,7 @@ Model <- R6Class(
     representation = function() {
       list(
         class = "Model",
+        .t = private$.t,
         compartments = sapply(
           private$.compartments,
           function(C) private$.formula[[C$value]]$formula
@@ -581,6 +612,11 @@ Model <- R6Class(
           l = c(l, fname)
       }
       l
+    },
+    
+    #' @field t the independent variable anme
+    t = function() {
+      private$.t
     }
   )
 )

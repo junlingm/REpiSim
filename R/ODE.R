@@ -20,7 +20,9 @@ ODE = R6Class(
         lapply(system$equations, private$format.equation),
         call("list", as.call(c(list(as.name("c")), der)))
       )
-      as.function(c(alist(t=, y=, parms=), as.call(l)))
+      args = alist(,,)
+      names(args) <- c(model$t, "y", "parms")
+      as.function(c(args, as.call(l)))
     },
     
     run = function(t, y0, parms, ...) {
