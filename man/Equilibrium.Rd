@@ -13,7 +13,7 @@ An R6 class to calculate the equilibrium of a model
 Calculate the equilibrium of the model with a given initial condition
 }
 \examples{
-## an SIR model
+# an SIR model
 SIR = Model$new(title="SIR")
 SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$
@@ -25,6 +25,7 @@ ode$simulate(
   y0=c(S=10000, I=1, R=0), 
   parms=c(beta=0.4, gamma=0.2), 
   alias = FALSE) # N is not returned.
+
 }
 \section{Super classes}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{\link[REpiSim:ODE]{REpiSim::ODE}} -> \code{Equilibrium}

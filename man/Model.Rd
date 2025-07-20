@@ -93,7 +93,7 @@ print(SIR)
 ## Method `Model$rename`
 ## ------------------------------------------------
 
-an SIR model
+# an SIR model
 SIR = Model$new()
 SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$
@@ -133,6 +133,8 @@ and aliases that must appear to satisfy dependencies in calculation}
 
 \item{\code{missing}}{a read-only field that returns the names of functions defined 
 neither in the global environment, nor in the attached.functions list.}
+
+\item{\code{t}}{the independent variable anme}
 }
 \if{html}{\out{</div>}}
 }
@@ -156,7 +158,7 @@ constructor
 
 It constructs a Model object with compartments and substitutions.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$new(..., file = NULL, .restricted = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$new(..., t = "t", functions = NULL, file = NULL, .restricted = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -165,6 +167,10 @@ It constructs a Model object with compartments and substitutions.
 \item{\code{...}}{Each extra parameter is either passed to the `compartment` method
 if it is a formula with the form `name ~ value`, or passed to the
 `where` methods to define a substitution if it is a named expression.}
+
+\item{\code{t}}{the name of the independent variable, either a name or a string}
+
+\item{\code{functions}}{a list of functions to be used in this model}
 
 \item{\code{file}}{if not NULL, a path or connection to a model file 
 to read the model from}
@@ -323,7 +329,7 @@ an invisible self to chain methods
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{an SIR model
+\preformatted{# an SIR model
 SIR = Model$new()
 SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$

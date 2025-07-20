@@ -36,7 +36,6 @@ g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-CGillespie-new}{\code{CGillespie$new()}}
-\item \href{#method-CGillespie-finalize}{\code{CGillespie$finalize()}}
 \item \href{#method-CGillespie-clone}{\code{CGillespie$clone()}}
 }
 }
@@ -73,21 +72,6 @@ SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 g = CGillespie$new(SIR)
 g$simulate(0:100, y0=c(S=1000, I=10, R=0), parms=c(beta=0.4,gamma=0.2))
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CGillespie-finalize"></a>}}
-\if{latex}{\out{\hypertarget{method-CGillespie-finalize}{}}}
-\subsection{Method \code{finalize()}}{
-the destructor
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CGillespie$finalize()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-The destructor unload the dynamic library loaded by cpp11
-after compiling the C++ simulation code.
 }
 
 }

@@ -12,6 +12,9 @@ likelihood = function(likelihood, data, simulate, pars, initial.values, parms) {
 }
 
 #' A maximum likelihood calibrator using the bbmle package
+#' @name MLE
+#' @docType class
+#' @export
 MLE <- R6Class(
   "MLE",
   inherit = Optimizer,
@@ -71,6 +74,7 @@ MLE <- R6Class(
     #' @param ... each argument is a formula defining the maps between 
     #' the data columns and the model variables. Please see the details section.
     #' @param cumulative whether the data is cumulative
+    #' @param mapping a named list specifying the mapping from data columns
     #' @details 
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
@@ -85,7 +89,7 @@ MLE <- R6Class(
   ),
   
   active = list(
-    #' @field the names of all parameters
+    #' @field parameters the names of all parameters
     parameters = function() {
       c(private$.model$parameters, private$.likelihood$par)
     }

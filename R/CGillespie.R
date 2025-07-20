@@ -241,6 +241,12 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       data = as.data.frame(private$gillespie(as.numeric(t), y, parms))
       colnames(data) = c("time", names(y))
       data
+    },
+    
+    # the destructor.
+    # It unload the dynamic library loaded by cpp11 after compiling the C++ simulation code.
+    finalize = function() {
+      dyn.unload(private$lib[["path"]])
     }
   ),
 
@@ -271,13 +277,6 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       private$lib = cpp_source(
         code = private$.program)
       private$gillespie = gillespie
-    },
-
-    #' @description the destructor
-    #' @details The destructor unload the dynamic library loaded by cpp11
-    #' after compiling the C++ simulation code.
-    finalize = function() {
-      dyn.unload(private$lib[["path"]])
     }
   ),
 )

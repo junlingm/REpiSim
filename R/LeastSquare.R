@@ -1,3 +1,7 @@
+#' The calibrator using the least square method.
+#' @name LeastSquare
+#' @docType class
+#' @export
 LeastSquare <- R6::R6Class(
   "LeastSquare",
   inherit = Optimizer,
@@ -47,6 +51,7 @@ LeastSquare <- R6::R6Class(
     #' the data columns and the model variables. Please see the details section.
     #' @param log boolean indicating whether to fit in log scale
     #' @param cumulative whether the data is cumulative
+    #' @param mapping a list specifying the mapping from data columns to model variables.
     #' @details 
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 

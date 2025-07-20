@@ -1,4 +1,7 @@
-#' A subclass of Baysian calibrator that uses the mcmc::metrop function
+#' An MCMC calibrator that uses the mcmc::metrop function
+#' @name Metrop
+#' @docType class
+#' @export
 Metrop <- R6::R6Class(
   "Metrop",
   inherit = Baysian,
@@ -53,6 +56,7 @@ Metrop <- R6::R6Class(
     #' @param ... each argument is a formula defining the maps between 
     #' the data columns and the model variables. Please see the details section.
     #' @param cumulative whether the data is cumulative
+    #' @param mapping a list specifying the mapping from data columns to model variables.
     #' @details 
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
@@ -66,6 +70,8 @@ Metrop <- R6::R6Class(
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     },
     
+    #' continue from the previous run
+    #' @param ... extra arguments to be passed to the metrop function
     continue = function(...) {
       if (is.null(private$.details))
         stop("was not run before")
@@ -80,12 +86,12 @@ Metrop <- R6::R6Class(
   ),
   
   active = list(
-    #' @field the names of all parameters
+    #' @field parameters the names of all parameters
     parameters = function() {
       c(private$.model$parameters, private$.likelihood$par)
     },
     
-    #' @field The samples of the posterior distribution
+    #' @field samples the samples of the posterior distribution
     samples = function() {
       as.mcmc(private$.details$batch)
     }

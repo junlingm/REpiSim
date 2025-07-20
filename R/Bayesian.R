@@ -1,4 +1,9 @@
-#' A subclass of Calibrator that uses a Baysian method.
+#' A calibrator that uses a Baysian method.
+#' @name Baysian
+#' @docType class
+#' @export
+#' 
+
 Baysian <- R6::R6Class(
   "Baysian",
   inherit = Calibrator,
@@ -38,7 +43,7 @@ Baysian <- R6::R6Class(
   ),
   
   public = list (
-    #' Calibrate the model to data
+    #' @title Calibrate the model to data
     #' 
     #' @param initial.values the initial values for the model. The parameters 
     #' that need to be estimate should be NA, those that do not need to be
@@ -52,8 +57,11 @@ Baysian <- R6::R6Class(
     #' @param ... extra arguments to be passed to calibrators
     calibrate = function(initial.values, parms, priors, guess, ...) {
       super$calibrate(initial.values, parms, priors, guess, ...)
-    },
-    
+    }
+  ),
+  
+  active = list(
+    #' @field samples the samples from the fit, a read-only field
     samples = function() {
       NULL
     }

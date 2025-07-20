@@ -12,7 +12,7 @@ A subclass of Calibrator that uses an optimizer and an initial guess.
 Calibrate the model to data
 }
 \section{Super class}{
-\code{REpiSim::Calibrator} -> \code{Optimizer}
+\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{Optimizer}
 }
 \section{Methods}{
 \subsection{Public methods}{

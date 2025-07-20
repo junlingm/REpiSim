@@ -10,6 +10,7 @@
 #' they can also be used for stochastic simulations (such as the Gillespie
 #' method).
 #' 
+#' @name Compartmental
 #' @docType class
 #' @export
 Compartmental <- R6Class(

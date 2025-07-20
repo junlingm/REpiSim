@@ -1,9 +1,15 @@
-#' An R6 class to calibrate a model to data
+#' The base R6 class for calibrators
 #' 
-#' @details Like a simulator, to calibrate the model to a dataset, a calibrator
+#' @details A calibrator calibrates the model to a dataset. Like a simulator, 
+#' to calibrate the model to a dataset, a calibrator
 #' expects the known and unknown initial conditions and the parameter values, 
 #' and the data to calibrate to. In addition, it also expects a mapping from 
 #' model solutions to observation variables.
+#' @name Calibrator
+#' @docType class
+#' @export
+#' 
+
 Calibrator <- R6::R6Class(
   "Calibrator",
   private = list(
@@ -61,6 +67,9 @@ Calibrator <- R6::R6Class(
     #' @param data a data.frame object containign the data for the calibration
     #' @param ... each argument is a formula defining the maps between 
     #' the data columns and the model variables. Please see the details section.
+    #' @param cumulative whether the data is cumulative
+    #' @param mapping a named list specifying the mapping from data columns
+    #' to quantities in the model.
     #' @details 
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
@@ -161,11 +170,12 @@ Calibrator <- R6::R6Class(
   ),
   
   active = list(
-    #' @field the names of all parameters
+    #' @field parameters the names of all parameters
     parameters = function() {
       private$.model$parameters
     },
     
+    #' @field details the details of the fitting output
     details = function() {
       private$.details
     }

@@ -62,7 +62,7 @@ ODE = R6Class(
 #' @param vars a character vector giving the compartments and substitutions
 #' which equilibrium value should be returned.
 #' @examples 
-#' ## an SIR model
+#' # an SIR model
 #' SIR = Model$new(title="SIR")
 #' SIR$compartment(S ~ -beta*S*I/N)$
 #'   compartment(I ~ beta*S*I/N - gamma*I)$
