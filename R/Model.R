@@ -462,7 +462,7 @@ Model <- R6Class(
     #' substitution or paramter
     #' 
     #' @examples
-    #' an SIR model
+    #' # an SIR model
     #' SIR = Model$new()
     #' SIR$compartment(S ~ -beta*S*I/N)$
     #'   compartment(I ~ beta*S*I/N - gamma*I)$
