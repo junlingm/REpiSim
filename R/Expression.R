@@ -62,6 +62,27 @@ Expression <- R6::R6Class(
     #' expression is replaced by the corresponding value in the list.
     substitute = function(subs) {
       private$do.substitute(private$.expr, subs)
+    },
+    
+    #' rename a parameter or a function to a new name
+    #' @param from the name to rename
+    #' @param to the new name
+    #' @return an invisible self
+    rename = function(from, to) {
+      if (!is.character(from) || !is.name(from))
+        stop("from must be a character or a name")
+      if (!is.character(to) || !is.name(to))
+        stop("to must be a character or a name")
+      subs = list()
+      subs[[from]] = to
+      if (from %in% private$.parms) {
+        private$.expr = private$do.substitute(private$.expr, subs)
+        private$.parms[private$.parms == from] = to
+      } else if (from %in% private$.functions) {
+        private$.expr = private$do.substitute(private$.expr, subs)
+        private$.functions[private$.functions == from] = to
+      }
+      invisible(self)
     }
   ),
   
