@@ -24,12 +24,9 @@ Model <- R6Class(
   "Model",
   private = list(
     .compartments = list(),
-    .parameters = list(),
     .where = list(),
     .formula = list(),
     .t = NULL,
-    # whether the compartment field of a substitution need to be recalculated
-    recalc.compartment = FALSE,
     # external functions used by this model
     .external.functions = list(),
 
@@ -59,25 +56,6 @@ Model <- R6Class(
         c(l, NULL)
       }
     },
-
-    # when a formula which name is given by owner is deleted, 
-    # the parameters that is used in it will have the dependence 
-    # on the formula removed. if there it is used in no formula
-    # then the parameter will be deleted.
-    remove.owner = function(l, owner) {
-      Filter(
-        function(x) !is.null(x),
-        lapply(
-          l,
-          function(p) {
-            if (owner %in% p$defined) {
-              p$defined = p$defined[p$defined != owner]
-              if (length(p$defined) == 0) NULL else p
-            } else p
-          }
-        )
-      )
-    },
     
     # this function defines a formula with validity checking, 
     # and extract parameters is formula is NULL, then it is removed
@@ -89,8 +67,11 @@ Model <- R6Class(
           stop("Redefining the compartment ", f, " as a function")
         if (!is.null(private$.where[[f]]))
           stop("Redefining the substitution ", f, " as a function")
-        if (!is.null(private$.parameters[[f]]))
-          stop("Redefining the parameter ", f, " as a function")
+        # check for parameter
+        for (ff in private$.formula) {
+          if (f %in% ff$parms)
+            stop("Redefining the parameter ", ff, " as a function")
+        }
       }
       private$.external.functions = union(private$.external.functions, e$functions)
       # are we redefining the formula or removing the formula?
@@ -99,39 +80,28 @@ Model <- R6Class(
         private$.parameters = private$remove.owner(private$.parameters, name)
         if (is.null(formula)) return()
       }
-      private$.formula[[name]] = list(formula = formula)
-      # define parameters
-      for (var in e$parms) {
-        if (!is.null(private$.compartments[[var]]) || !is.null(private$.where[[var]])) {
-          if (var != name)
-            private$.formula[[name]]$depend = c(private$.formula[[name]]$depend, var)
-        } else if (var != private$.t) {
-          def = private$.parameters[[var]]
-          if (is.null(def))
-            def = list(name = var)
-          def$defined = c(def$defined, name)
-          private$.parameters[[var]] = def
-        }
-      }
+      private$.formula[[name]] = e
     },
     
     # whether the name is defined as a compartment, a substitution or a parameter
     defined = function(name) {
       !is.null(private$.compartments[[name]]) || 
-      !is.null(private$.where[[name]]) ||
-      !is.null(private$.parameters[[name]])
+      !is.null(private$.where[[name]])
     },
 
     # perform a rename. The sanity check is already done in the rename method.
     do.rename = function(from, to) {
+      update.defined = NULL
       if (!is.null(private$.compartments[[from]])) {
         formula.from = paste0(".d.", from)
         formula.to = paste0(".d.", to)
+        private$.formula[[formula.to]] = private$.formula[[formula.from]]
+        private$.formula[[formula.from]] = NULL
         private$.compartments[[to]] = private$.compartments[[from]]
         private$.compartments[[to]]$name = to
         private$.compartments[[to]]$value = formula.to
         private$.compartments[[from]] = NULL
-        private$recalc.compartment = length(private$.where) > 0
+        update.defined = TRUE
       } else if (!is.null(private$.where[[from]])) {
         formula.from = from
         formula.to = to
@@ -140,60 +110,15 @@ Model <- R6Class(
         private$.where[[to]]$value = to
         private$.where[[from]] = NULL
         change.formula = TRUE
-        private$recalc.compartment = length(private$.where) > 0
-      } else if (!is.null(private$.parameters[[from]])) {
-        formula.from = NULL
-        private$.parameters[[to]] = private$.parameters[[from]]
-        private$.parameters[[to]]$name = to
-        private$.parameters[[from]] = NULL
+        update.defined = TRUE
       } else stop(from, " is not defined")
-      if (!is.null(formula.from)) {
-        private$.formula[[formula.to]] = private$.formula[[formula.from]]
-        private$.formula[[formula.from]] = NULL
-        # if to was a parameter, remove the parameter
-        if (!is.null(private$.parameters[[to]])) 
-          private$.parameters[[to]] = NULL
-      }
-      
+
       # change the name in each formula
-      subs = list()
-      subs[[from]] = as.name(to)
-      private$.formula = lapply(
-        private$.formula,
-        function(f) {
-          e = Expression$new(f$formula)
-          f$formula = e$substitute(subs=subs)
-          f$depend[f$depend == from] = to
-          f
-        }
-      )
-      # change the defined field of the parameters
-      private$.parameters = lapply(
-        private$.parameters,
-        function(p) {
-          p$defined[p$defined == from] = to
-          p
-        }
-      )
-    },
-    
-    # calculate if the substitution s depends on a compartment
-    calc.compartment = function(s) {
-      f = private$.formula[[s$value]]
-      for (d in f$depend) {
-        if (!is.null(private$.compartments[[d]])) 
-          return (TRUE)
-        w = private$.where[[d]]
-        if (!is.null(w)) {
-          if (is.null(w$compartment))
-            private$.where[[d]]$compartment = private$calc.compartment(w)
-          if (private$.where[[d]]$compartment) return (TRUE)
-        }
+      for (e in private$.formula) {
+        e$rename(from, to)
       }
-      s$compartment = FALSE
-      s
     },
-    
+
     # load the model from a file
     load = function(file) {
       if (is.character(file)) {
@@ -308,23 +233,16 @@ Model <- R6Class(
       name = as.character(eq[[2]])
       if (name == private$.t)
         stop(name, " is the independent variable, and so cannot be used as a dependent variable name")
+      if (!is.null(private$.where[[name]]))
+        stop(name, " is already defined as a substitution, so cannot be used as a dependent variable name")
       formula = eq[[3]]
       if (is.null(formula)) {
         self$delete(name)
       } else {
         rate = paste0(".d.", name)
         private$define.formula(rate, formula)
-        if (is.null(private$.compartments[[name]]))
-          private$.compartments[[name]] = list(name = name, value = rate)
-        p = private$.parameters[[name]]
-        if (!is.null(p)) {
-          for (d in p$defined) {
-            private$.formula[[d]]$depend = c(private$.formula[[d]]$depend, name)
-          }
-          private$.parameters[[name]] = NULL
-        }
+        private$.compartments[[name]] = list(name = name, value = rate)
       }
-      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
     
@@ -379,17 +297,8 @@ Model <- R6Class(
         if (name == private$.t)
           stop(name, " is the independent variable, and so cannot be used as a parameter name")
         private$define.formula(name, defs[[name]])
-        if (is.null(private$.where[[name]]))
-          private$.where[[name]] = list(name=name, value=name)
-        p = private$.parameters[[name]]
-        if (!is.null(p)) {
-          for (d in p$defined) {
-            private$.formula[[d]]$depend = c(private$.formula[[d]]$depend, name)
-          }
-          private$.parameters[[name]] = NULL
-        }
+        private$.where[[name]] = list(name=name, value=name)
       }
-      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
 
@@ -430,22 +339,6 @@ Model <- R6Class(
         private$.where[[name]] = NULL
         private$define.formula(name, NULL)
       } else stop(name, " is not defined")
-      # if name is used, make it a parameter
-      used = Filter(
-        function(f) { name %in% f$depend },
-        private$.formula
-      )
-      private$.parameters[[name]] = if (length(used) == 0) NULL else
-        list(name = name, defined = used)
-      # remove name from the dependences of each formula
-      private$.formula = lapply(
-        private$.formula,
-        function(f) {
-          f$depend = f$depend[f$depend != name]
-          f
-        }
-      )
-      private$recalc.compartment = length(private$.where) > 0
       invisible(self)
     },
 
@@ -514,13 +407,13 @@ Model <- R6Class(
         l = c(l, "  Compartments:")
         for (c in private$.compartments) {
           f = private$.formula[[c$value]]
-          l = c(l, paste0("    ", c$name, " ~ ", deparse(f$formula)))
+          l = c(l, paste0("    ", c$name, " ~ ", deparse(f$expr)))
         }
       }
       if (length(private$.where) > 0) {
         l = c(l, "  where")
         for (w in private$.where) {
-          l = c(l, paste0("    ", w$name, " = ", deparse(private$.formula[[w$value]]$formula)))
+          l = c(l, paste0("    ", w$name, " = ", deparse(private$.formula[[w$value]]$expr)))
         }
       }
       if (length(self$parameters) > 0)
@@ -540,13 +433,13 @@ Model <- R6Class(
       compartments = lapply(
         private$.compartments,
         function(C) {
-          call("==", call("'", as.name(C$name)), private$.formula[[C$value]]$formula)
+          call("==", call("'", as.name(C$name)), private$.formula[[C$value]]$expr)
         }
       )
       where = lapply(
         private$.where,
         function(w) {
-          call("==", as.name(w$name), private$.formula[[w$value]]$formula)
+          call("==", as.name(w$name), private$.formula[[w$value]]$expr)
         }
       )
       list(equations = compartments, where = where)
@@ -554,27 +447,24 @@ Model <- R6Class(
     
     #' @field parameters A read-only field that returns a character vector of parameter names
     parameters = function() {
-      names(private$.parameters)
+      parms = c()
+      for (e in private$.formula) {
+        if (length(e$parms) > 0) {
+          parms = union(parms, e$parms)
+        }
+      }
+      remove = c(names(private$.compartments), names(private$.where), private$.t)
+      setdiff(parms, remove)
     },
 
     #' @field substitutions A read-only field that returns a named list of expressions
     substitutions = function() {
       l = list()
       compartments = self$compartments
-      if (private$recalc.compartment) {
-        private$.where = lapply(private$.where, function(w) {
-          w$compartment = NULL
-          w
-        })
-        private$.where = lapply(private$.where, function(w) {
-          w$compartment = private$calc.compartment(w)
-          w
-        })
-        private$recalc.compartment = FALSE
-      }
       for (w in private$.where) {
-        if (!is.null(w$compartment))
-          l[[w$name]] = private$.formula[[w$value]]$formula
+        e = private$.formula[[w$value]]
+        l[[w$name]] = e$expr
+        if (length(intersect(e$parms, compartments)) > 0)
           attr(l[[w$name]], "compartment") = TRUE
       }
       l
@@ -589,7 +479,7 @@ Model <- R6Class(
         .t = private$.t,
         compartments = sapply(
           private$.compartments,
-          function(C) private$.formula[[C$value]]$formula
+          function(C) private$.formula[[C$value]]$expr
         ),
         substitutions = self$substitutions,
         attached.functions = self$attached.functions
