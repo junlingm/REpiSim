@@ -46,6 +46,12 @@
   x$div(b)
 }
 
+## the builtin functions that are not reported in Model$functions
+builtin.functions = c(
+  "+", "-", "*", "/", "^", "==", ">", "<", ">=", "<=", "!=",
+  "&&", "||", "&", "|", "!", "[", "[[", "ifelse"
+)
+
 # An R6 class to extract names and functions from an expression
 Expression <- R6::R6Class(
   "Expression",
@@ -64,7 +70,7 @@ Expression <- R6::R6Class(
           private$.parms = c(private$.parms, var)
       } else if (is.call(expr)) {
         fn = as.character(expr[[1]])
-        if (!fn %in% private$.functions)
+        if (!(fn %in% private$.functions) && !(fn %in% builtin.functions))
           private$.functions = c(fn, private$.functions)
         for (a in as.list(expr)[-1])
           private$extract(a)
@@ -265,3 +271,20 @@ Expression <- R6::R6Class(
     }
   )
 )
+
+
+# build up the order of dependence of an alias
+build.order = function(order, info) {
+  # if var is already available in order, no need to change the order.
+  if (info$name %in% order) return(order)
+  # calculate the unavailable dependencies (i.e., not in order)
+  deps = setdiff(private$.formula[[info$value]]$depend, order)
+  # no dependencies or dependencies are already available
+  # then we can just put it in order
+  if (length(deps) == 0) return(c(order, info$name))
+  for (d in deps) {
+    v = private$.where[[d]]
+    if (!is.null(v)) order = private$build.order(order, v)
+  }
+  c(order, info$name)
+}
