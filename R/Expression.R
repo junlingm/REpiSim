@@ -273,18 +273,32 @@ Expression <- R6::R6Class(
 )
 
 
-# build up the order of dependence of an alias
-build.order = function(order, info) {
-  # if var is already available in order, no need to change the order.
-  if (info$name %in% order) return(order)
-  # calculate the unavailable dependencies (i.e., not in order)
-  deps = setdiff(private$.formula[[info$value]]$depend, order)
-  # no dependencies or dependencies are already available
-  # then we can just put it in order
-  if (length(deps) == 0) return(c(order, info$name))
-  for (d in deps) {
-    v = private$.where[[d]]
-    if (!is.null(v)) order = private$build.order(order, v)
+#' return the order of expressions by dependence.
+#' @param exprs a named list of expressions
+#' @return a character vector giving the order of expressions
+#' @details
+#' An expression may need the value of other expressions to be evaluated.
+order = function(exprs) {
+  # put expr in the order
+  build <- function(order, name) {
+    if (name %in% order) return(order)
+    e = exprs[[name]]
+    for (p in e$parms) {
+      if (!is.null(exprs[[p]]))
+        order = build(order, p)
+    }
+    c(order, name)
   }
-  c(order, info$name)
+  ns = names(exprs)
+  if (is.null(ns) || any(ns == ""))
+    stop("expressions must be named")
+  # the exprs must be a list of Expression objects
+  check = sapply(exprs, function(e) is(e, "Expression"))
+  if (!all(check))
+    stop(paste(ns[!check], collapse=", "), " must be Expression objects")
+  Reduce(
+    build,
+    ns,
+    init = c()
+  )
 }

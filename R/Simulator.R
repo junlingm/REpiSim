@@ -1,3 +1,44 @@
+## the default functions that are always available
+default.functions = c(
+  "exp", "log", "log10", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan",
+  "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
+  "abs", "sign", "round", "floor", "ceiling", "trunc",
+  "min", "max", "sum", "prod", "mean", "var", "sd",
+  "cumsum", "cumprod", "diff", "lag", "lead",
+  "which", "is.na", "is.finite", "is.infinite", "is.nan",
+  "ifelse", "all", "any", "length", "nrow", "ncol",
+  "matrix", "eigen", "qr", "svd", "chol", "solve", "det",
+  "rep", "seq", "seq_along", "seq_len", "replicate",
+  "sample", "sort", "order", "rank", 
+  "rexp", "rnorm", "runif", "rpois", "rbinom", "rt", "rchisq", "rf",
+  "rweibull", "rgamma", "rnbinom", "rgeom", "rhyper", "rlogis", "rt",
+  "pexp", "pnorm", "punif", "ppois", "pbinom", "pt", "pchisq", "pf",
+  "pweibull", "pgamma", "pnbinom", "pgeom", "phyper", "plogis", "pt",
+  "qexp", "qnorm", "qunif", "qpois", "qbinom", "qt", "qchisq", "qf",
+  "qweibull", "qgamma", "qnbinom", "qgeom", "qhyper", "qlogis", "qt"
+)
+
+## a list of functions that are can be used in the models
+attached.functions = NULL
+
+#' attach a function to be used by the models.
+#' @param functions a named list of functions, where the name are the functions used
+#' in models
+#' @param ... named arguments, each specifies a function
+#' @details a NULL value removes a function from the list of attached functions.
+attach.function <- function(..., functions=NULL) {
+  # the ... must be named functions
+  fs = c(list(...), functions)
+  ns = names(fs)
+  if (is.null(ns) || "" %in% ns)
+    stop("functions must be named")
+  check = sapply(fs, function(f) is.function(f) || is.null(f))
+  if (!all(check))
+    stop(paste(ns[!check], collapse=", "), "must be functions")
+  for (n in ns)
+    attached.functions[[n]] <<- fs[[n]]
+}
+
 #' A R6 class that is the super class for all numerical simulators
 #' 
 #' The main method is `simulate`.
@@ -77,13 +118,24 @@ Simulator = R6Class(
     #' @param model the model to simulate
     #' @details the Simulation class is an abstract class. It's constructor
     #' should not be explicitly called.
+    #' 
+    #' Functions used by the model must be explicited attached using the attach.function 
+    #' function provided by this package.
     initialize = function(model) {
-      missing = model$missing
-      if (length(missing) > 0) 
-        stop("Undefined functions: ", missing)
+      # model functions must be defined
+      fs = model$functions
+      if (!is.null(fs)) {
+        check = sapply(fs, function(f) f %in% default.functions || !is.null(attached.functions[[f]]))
+        if (!all(check)) {
+          missing = fs[!check]
+          stop("missing functions: ", paste(missing, collapse=", "))
+        }
+      }
       private$compartments = model$compartments
       private$parameters = model$parameters
-      subst = model$substitutions[model$order]
+      # note that the order of subst guarantees that the evaluation can be carried out
+      # sequentially
+      subst = model$substitutions
       private$alias = list()
       for (n in names(subst)) {
         s = subst[[n]]

@@ -398,16 +398,38 @@ Model <- R6Class(
     },
 
     #' @field substitutions A read-only field that returns a named list of expressions
+    #' Note that the order is sorted by dependence. That is, if a substitution uses the
+    #' value of another, then it appears after the other. In addition, if a substitution
+    #' depends on a compartment, then it has an attribute named "compartment" which 
+    #' equals TRUE
     substitutions = function() {
-      l = list()
+      l = lapply(
+        private$.where,
+        function(w) { private$.formula[[w$value]] }
+      )
+      l = l[order(l)]
+      nl = names(l)
       compartments = self$compartments
-      for (w in private$.where) {
-        e = private$.formula[[w$value]]
-        l[[w$name]] = e$expr
-        if (length(intersect(e$parms, compartments)) > 0)
-          attr(l[[w$name]], "compartment") = TRUE
-      }
-      l
+      is.compartment = sapply(
+        l, 
+        function(e) { any(e$parms %in% compartments) }
+      )
+      indirect = sapply(
+        nl,
+        function(name) {
+          e = l[[name]]
+          check = sapply(
+            e$parms, 
+            function(p) { p %in% nl && is.compartment[[p]] }
+          )
+          any(check)
+        }
+      )
+      mapply(function(e, c, i) {
+        x = e$expr
+        if (c || i) attr(x, "compartment") = TRUE
+        x
+      }, l, is.compartment, indirect)
     },
     
     #' @field representation a read-only active field that returns the representation of the model
