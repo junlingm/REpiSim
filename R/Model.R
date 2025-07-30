@@ -111,10 +111,6 @@ Model <- R6Class(
   ),
 
   public = list(
-    #' @field restricted a boolean variable indicating whether to restrict functions 
-    #' allowed to be used in the ODE system. Default to FALSE
-    restricted = FALSE,
-    
     #' @description constructor
     #' 
     #' It constructs a Model object with compartments and substitutions.
@@ -125,8 +121,6 @@ Model <- R6Class(
     #' @param t the name of the independent variable, either a name or a string
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
-    #' @param .restricted a boolean variable indicating whether the ODE system
-    #' only has access to a limited set of functions. Default to TRUE
     #' @examples
     #' # An SIR model 
     #' SIR = Model$new(
@@ -136,8 +130,7 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., t="t", file=NULL, .restricted=FALSE) {
-      self$restricted = .restricted
+    initialize = function(..., t="t", file=NULL) {
       if (!is.null(file)) private$load(file)
       private$.t = if (is.null(t) || t == "") "t" else if (is.character(t)) t else
         stop("Invalid independent variable name ", t)
