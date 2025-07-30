@@ -29,33 +29,6 @@ Model <- R6Class(
     .t = NULL,
     # external functions used by this model
     .external.functions = list(),
-
-    # build up the order of dependence of an alias
-    build.order = function(order, info) {
-      # if var is already available in order, no need to change the order.
-      if (info$name %in% order) return(order)
-      # calculate the unavailable dependencies (i.e., not in order)
-      deps = setdiff(private$.formula[[info$value]]$depend, order)
-      # no dependencies or dependencies are already available
-      # then we can just put it in order
-      if (length(deps) == 0) return(c(order, info$name))
-      for (d in deps) {
-        v = private$.where[[d]]
-        if (!is.null(v)) order = private$build.order(order, v)
-      }
-      c(order, info$name)
-    },
-    
-    # this function returns an alist with a given number n of arguments
-    make.alist = function(n) {
-      if (n == 0) NULL else {
-        l = alist(a=)
-        for (i in 1:n) {
-          names(l)[i] = letter.label(i, enclose=NULL)
-        }
-        c(l, NULL)
-      }
-    },
     
     # this function defines a formula with validity checking, 
     # and extract parameters is formula is NULL, then it is removed
