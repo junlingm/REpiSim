@@ -82,7 +82,6 @@ Compartmental <- R6Class(
     #' @description constructor
     #' @param ... the names of the compartment, or substitutions
     #' @param t the name of the independent variable, either a name or a string
-    #' @param functions a list of functions to be used in this model
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
     #' @examples
@@ -91,8 +90,8 @@ Compartmental <- R6Class(
     #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
     #' SIR$transition(I->R ~ gamma*I, name="recovery")
     #' print(SIR)
-    initialize = function(..., t="t", functions = NULL, file = NULL) {
-      super$initialize(..., t=t, functions=functions, file=file)
+    initialize = function(..., t="t", file = NULL) {
+      super$initialize(..., t=t, file=file)
     },
     
     #' @description define a compartment 
