@@ -61,7 +61,12 @@ Model <- R6Class(
     # and extract parameters is formula is NULL, then it is removed
     # if the formula with the given name already exists, it is redefined
     define.formula = function(name, formula) {
-      e = Expression$new(formula)
+      # if formula is NULL, remove the formula
+      if (is.null(formula)) {
+        private$.formula[[name]] = NULL
+        return()
+      }
+      e = if (is(formula, "Expression")) formula else Expression$new(formula)
       for (f in e$functions) {
         if (!is.null(private$.compartments[[f]]))
           stop("Redefining the compartment ", f, " as a function")
@@ -76,19 +81,9 @@ Model <- R6Class(
       private$.external.functions = union(private$.external.functions, e$functions)
       # are we redefining the formula or removing the formula?
       # if so, we remove the old definition
-      if (!is.null(private$.formula[[name]]) || is.null(formula)) {
-        private$.parameters = private$remove.owner(private$.parameters, name)
-        if (is.null(formula)) return()
-      }
       private$.formula[[name]] = e
     },
     
-    # whether the name is defined as a compartment, a substitution or a parameter
-    defined = function(name) {
-      !is.null(private$.compartments[[name]]) || 
-      !is.null(private$.where[[name]])
-    },
-
     # perform a rename. The sanity check is already done in the rename method.
     do.rename = function(from, to) {
       update.defined = NULL
@@ -377,8 +372,6 @@ Model <- R6Class(
       if (!is.name(from) && ! is.character(from))
         stop("Invalid name ", from)
       from = as.character(from)
-      if (!private$defined(from))
-        stop(from, " is not defined")
       if (from == private$.t) {
         private$.t = as.name(from)
         return(invisible(self))
@@ -391,9 +384,7 @@ Model <- R6Class(
       to = as.character(to)
       if (to == private$.t)
         stop(from, " cannot be renamed to the independent variable")
-      if (private$defined(to))
-        stop(to, " is already defined")
-      
+
       if (from == to) return()
 
       private$do.rename(from, to)
