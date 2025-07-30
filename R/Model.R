@@ -21,9 +21,7 @@ Model <- R6Class(
     .where = list(),
     .formula = list(),
     .t = NULL,
-    # external functions used by this model
-    .external.functions = list(),
-    
+
     # this function defines a formula with validity checking, 
     # and extract parameters is formula is NULL, then it is removed
     # if the formula with the given name already exists, it is redefined
@@ -45,7 +43,6 @@ Model <- R6Class(
             stop("Redefining the parameter ", ff, " as a function")
         }
       }
-      private$.external.functions = union(private$.external.functions, e$functions)
       # are we redefining the formula or removing the formula?
       # if so, we remove the old definition
       private$.formula[[name]] = e
@@ -93,7 +90,6 @@ Model <- R6Class(
           stop("not a valid model file: ", file)
       }
       private$construct(file)
-      self$attached.functions = file$attached.functions
     },
     
     #reconstruct the model from a representation
@@ -119,10 +115,6 @@ Model <- R6Class(
     #' allowed to be used in the ODE system. Default to FALSE
     restricted = FALSE,
     
-    #' @field attached.functions the list of provided R functions to be used in
-    #' the model
-    attached.functions = list(),
-    
     #' @description constructor
     #' 
     #' It constructs a Model object with compartments and substitutions.
@@ -131,7 +123,6 @@ Model <- R6Class(
     #' if it is a formula with the form `name ~ value`, or passed to the
     #' `where` methods to define a substitution if it is a named expression.
     #' @param t the name of the independent variable, either a name or a string
-    #' @param functions a list of functions to be used in this model
     #' @param file if not NULL, a path or connection to a model file 
     #' to read the model from
     #' @param .restricted a boolean variable indicating whether the ODE system
@@ -145,21 +136,12 @@ Model <- R6Class(
     #'   N = S + I + R # the total population N
     #' )
     #' print(SIR)
-    initialize = function(..., t="t", functions=NULL, file=NULL, .restricted=FALSE) {
+    initialize = function(..., t="t", file=NULL, .restricted=FALSE) {
       self$restricted = .restricted
       if (!is.null(file)) private$load(file)
       private$.t = if (is.null(t) || t == "") "t" else if (is.character(t)) t else
         stop("Invalid independent variable name ", t)
       args = as.list(substitute(list(...)))[-1]
-      if (!is.null(functions)) {
-        nf = names(functions)
-        if (is.null(nf) || any(nf == ""))
-          stop("functions must be named")
-      }
-      if (length(functions) > 0) {
-        for (i in 1:length(functions))
-          self$attached.functions[[nf[i]]] = functions[[i]]
-      }
       ns = names(args)
       if (length(args) > 0) {
         for (i in 1:length(args)) {
@@ -439,27 +421,17 @@ Model <- R6Class(
           private$.compartments,
           function(C) private$.formula[[C$value]]$expr
         ),
-        substitutions = self$substitutions,
-        attached.functions = self$attached.functions
+        substitutions = self$substitutions
       )
     },
     
-    #' @field order a read-only active field that returns the order of the equations
-    #' and aliases that must appear to satisfy dependencies in calculation
-    order = function() {
-      Reduce(private$build.order, private$.where, c())
-    },
-    
-    #' @field missing a read-only field that returns the names of functions defined 
-    #' neither in the global environment, nor in the attached.functions list.
-    missing = function() {
-      l = c()
-      for (fname in private$.external.functions) {
-        f = if (exists(fname)) get(fname) else self$attached.functions[[fname]]
-        if (!is.function(f))
-          l = c(l, fname)
+    #' @field functions return the functions used by this model
+    functions = function() {
+      f = c()
+      for (e in private$.formula) {
+        f = union(f, e$functions)
       }
-      l
+      f
     },
     
     #' @field t the independent variable anme
