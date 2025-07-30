@@ -1,3 +1,51 @@
+#' Define a generic addition operator
+#' @param a the first argument
+#' @param b the second argument
+#' @return the sum of a and b
+#' @export
+`%+%` <- function(a, b) UseMethod("%+%", a)
+
+#' Define a generic subtraction operator
+#' @param a the first argument
+#' @param b the second argument
+#' @return the difference of a and b
+#' @export
+`%-%` <- function(a, b) UseMethod("%-%", a)
+
+#' Define a generic multiplication operator
+#' @param a the first argument
+#' @param b the second argument
+#' @return the product of a and b
+#' @export
+`%*%` <- function(a, b) UseMethod("%*%", a)
+
+#' Define a generic division operator
+#' @param a the first argument
+#' @param b the second argument
+#' @return the quotient of a and b
+#' @export
+`%/%` <- function(a, b) UseMethod("%/%", a)
+
+`%+%.Expression` <- function(a, b) {
+  x = a$clone()
+  x$add(b)
+}
+
+`%-%.Expression` <- function(a, b) {
+  x = a$clone()
+  x$sub(b)
+}
+
+`%*%.Expression` <- function(a, b) {
+  x = a$clone()
+  x$mul(b)
+}
+
+`%/%.Expression` <- function(a, b) {
+  x = a$clone()
+  x$div(b)
+}
+
 # An R6 class to extract names and functions from an expression
 Expression <- R6::R6Class(
   "Expression",
@@ -83,6 +131,120 @@ Expression <- R6::R6Class(
         private$.functions[private$.functions == from] = to
       }
       invisible(self)
+    },
+
+    #' assign the value of an expression
+    #' @param e the expression to assign
+    #' @return self
+    assign = function(e) {
+      if (!is(e, "Expression")) e = Expression(e)
+      private$.expr = e$expr
+      private$.parms = e$parms
+      private$.functions = e$functions
+      self
+    },
+    
+    #' add b to this expression
+    #' @param b a number, a anme or a call.
+    #' @return self
+    add = function(b) {
+      if (!is(b, "Expression")) b = Expression$new(b)
+      if (is.numeric(b$expr)) {
+        if (b$expr == 0) return(self)
+        if (is.numeric(private$.expr)) {
+          private$.expr = private$.expr + b$expr
+          return(self)
+        }
+      }
+      if (is.numeric(private$.expr) && private$.expr == 0) return (self$assign(b))
+      private$.expr = as.call(list(as.name("+"), private$.expr, b$expr))
+      private$.parms = union(private$.parms, b$parms)
+      private$.functions = union(private$.functions, b$functions)
+      self
+    },
+    
+    
+    #' subtract an expression from this one
+    #' @param b the value to subtract
+    #' @return self
+    sub = function(b) {
+      if (!is(b, "Expression")) b = Expression$new(b)
+      if (is.numeric(b$expr)) {
+        if (b$expr == 0) return (self)
+        if (is.numeric(private$.expr)) {
+          private$.expr = private$.expr - b$expr
+          return(self)
+        }
+      }
+      if (is.numeric(private$.expr) && private$.expr == 0) {
+        nb = b$clone()
+        return (self$assign(nb$negate()))
+      }
+      private$.expr = as.call(list(as.name("-"), private$.expr, b$expr))
+      private$.parms = union(private$.parms, b$parms)
+      private$.functions = union(private$.functions, b$functions)
+      self
+    },
+    
+    #' negate the expression
+    #' @return self
+    negate = function() {
+      if (is.numeric(private$.expr)) {
+        private$.expr = -private$.expr
+      } else {
+        private$.expr = if (is.call(private$.expr) && private$.expr[[1]] == "-" && length(private$.expr) == 2) {
+          private$.expr[[2]]
+        } else as.call(list(as.name("-"), private$.expr))
+      }
+      self
+    },
+    
+    #' multiple by a factor
+    #' @param b the value to multiply by
+    #' @return self
+    mul = function(b) {
+      if (!is(b, "Expression")) b = Expression$new(b)
+      if (is.numeric(b$expr)) {
+        if (b$expr == 1) return(self)
+        if (b$expr == 0) {
+          private$.expr = 0
+          private$.parms = character(0)
+          private$.functions = character(0)
+          return(self)
+        }
+        if (is.numeric(private$.expr)) {
+          private$.expr = private$.expr * b$expr
+          return(self)
+        }
+      }
+      if (is.numeric(private$.expr)) {
+        if (private$.expr == 0) return (self)
+        if (private$.expr == 1) return (self$assign(b))
+      }
+      private$.expr = as.call(list(as.name("*"), private$.expr, b$expr))
+      private$.parms = union(private$.parms, b$parms)
+      private$.functions = union(private$.functions, b$functions)
+      self
+    },
+    
+    #' divide by a factor
+    #' @param b the value to divide by
+    #' @return self
+    div = function(b) {
+      if (is.numeric(private$.expr) && private$.expr == 0) return(self)
+      if (!is(b, "Expression")) b = Expression$new(b)
+      if (is.numeric(b$expr)) {
+        if (b$expr == 0) stop("dividing by 0")
+        if (b$expr == 1) return(self)
+        if (is.numeric(private$.expr)) {
+          private$.expr = private$.expr / b$expr
+          return(self)
+        }
+      }
+      private$.expr = as.call(list(as.name("/"), private$.expr, b$expr))
+      private$.parms = union(private$.parms, b$parms)
+      private$.functions = union(private$.functions, b$functions)
+      self
     }
   ),
   

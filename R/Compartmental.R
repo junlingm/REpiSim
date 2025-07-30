@@ -19,93 +19,19 @@ Compartmental <- R6Class(
   private = list(
     # the transitionss
     .transitions = list(),
-
-    # add two rates
-    add = function(a, b) {
-      if (is.numeric(a)) {
-        if (a == 0) return(b)
-        if (is.numeric(b)) return(a+b)
-      }
-      if (is.numeric(b) && b == 0) a else
-        as.call(list(as.name("+"), a, b))
-    },
-    
-    # subtract two rates
-    sub = function(a, b) {
-      if (is.call(b)) {
-        if (b[[1]] == "-" && length(b) == 2)
-          return (private$add(a, b[[2]]))
-      }
-      if (is.numeric(a)) {
-        if (is.numeric(b)) return(a-b)
-        if (a == 0) return(as.call(list(as.name("-"), b)))
-      }
-      if (is.numeric(b) && b==0) return(a)
-      as.call(list(as.name("-"), a, b))
-    },
-    
-    #multiple a rate by a factor
-    mul = function(a, b) {
-      if (is.numeric(a)) {
-        if (a == 0) return(0)
-        if (a == 1) return(b)
-        if (a == -1) return(private$sub(0, b))
-        if (is.numeric(b)) return (a*b)
-      }
-      if (is.numeric(b)) {
-        if (b == 0) return(0)
-        if (b == 1) return(a)
-        if (b == -1) return(private$sub(0, a))
-      }
-      if ((is.call(a) && a[[1]] == "/") || (is.call(b) && b[[1]] == "/")) {
-        if (is.call(a) && a[[1]] == "/") {
-          na = a[[2]]
-          da = a[[3]]
-        } else {
-          na = a
-          da = 1
-        }
-        if (is.call(b) && b[[1]] == "/") {
-          nb = b[[2]]
-          db = b[[3]]
-        } else {
-          nb = b
-          db = 1
-        }
-        private$div(private$mul(na, nb), private$mul(da, db)) 
-      } else if (is.call(a) && a[[1]] == "-" && length(a) == 2) {
-        private$sub(0, private$mul(a[[2]], b))
-      } else if (is.call(b) && b[[1]] == "-" && length(b) == 2) {
-        private$sub(0, private$mul(a, b[[2]]))
-      } else as.call(list(as.name("*"), a, b))
-    },
-    
-    # divide a rate by a factor
-    div = function(a, b) {
-      if (is.numeric(b)) {
-        if (b == 1) return(a)
-        if (b == -1) return(private$sub(0, a))
-        if (b == 0) stop("divide by 0")
-      }
-      if (is.call(a) && a[[1]] == "-" && length(a) == 2) {
-        private$sub(0, private$div(a[[2]], b))
-      } else if (is.call(b) && b[[1]] == "-" && length(b) == 2) {
-        private$sub(0, private$div(a, b[[2]]))
-      } else as.call(list(as.name("/"), a, b)) 
-    },
     
     # formulate the equation for a compartment by adding the rates of
     # the transitions that flow to the compartment, and subtracting the
     # rates of the transitions that flow from the compartment.
     equation = function(compartment) {
       rate = Reduce(function(rate, y) {
-        r = private$.formula[[y$name]]$formula
+        r = private$.formula[[y$name]]
         if (!is.null(y$from) && y$from == compartment) {
-          private$sub(rate, r) 
+          rate %-% r
         } else if (!is.null(y$to) && y$to == compartment) {
-          private$add(rate, r)
+          rate %+% r
         } else rate
-      }, private$.transitions, 0)
+      }, private$.transitions, Expression$new(0))
       super$compartment(call("~", as.name(compartment), rate))
     },
 
@@ -113,7 +39,7 @@ Compartmental <- R6Class(
     parse.rate = function(e) {
       if (!is.call(e)) e else {
         if (e[[1]] != "~") stop("invalid transition") 
-        list(compartment = e[[2]], rate=e[[3]])
+        list(compartment = e[[2]], rate=Expression$new(e[[3]]))
       }  
     },
     
@@ -127,12 +53,6 @@ Compartmental <- R6Class(
         i = i + 1
       }
       name
-    },
-    
-    # whether the name is defined as a transition, a compartment,
-    # a parameter or a substitution
-    defined = function(name) {
-      super$defined(name) || !is.null(private$.transitions[[name]])
     },
     
     # perform the actual rename. If from is a transition, the
@@ -300,7 +220,7 @@ Compartmental <- R6Class(
         if (to == private$.t)
           stop(from, " is the independent variable, and cannot be used as a compartment")
         if (!is.null(r)) rate = r
-      } else rate = substitute(rate)
+      } else rate = Expression$new(substitute(rate))
 
       # argument validity check
       if (!is.null(from) && !is.character(from)) {
@@ -324,7 +244,7 @@ Compartmental <- R6Class(
         }
       }
       if (percapita) 
-        rate = private$mul(rate, as.name(from))
+        rate$mul(as.name(from))
       # name
       if (is.null(name)) name = private$transition.name(from, to)
 
@@ -389,7 +309,7 @@ Compartmental <- R6Class(
           l = c(l, paste0("    \"", tr$name, "\" : ", 
                           if (is.null(tr$from)) "NULL" else tr$from, " -> ", 
                           if (is.null(tr$to)) "NULL" else tr$to,
-                          " ~ ", deparse(private$.formula[[tr$name]]$formula)))
+                          " ~ ", deparse(private$.formula[[tr$name]]$expr)))
       }
       if (length(private$.where) > 0) {
         l = c(l, "  where")
@@ -409,7 +329,7 @@ Compartmental <- R6Class(
       lapply(
         private$.transitions,
         function(x) { 
-          x$rate=private$.formula[[x$name]]$formula
+          x$rate=private$.formula[[x$name]]$expr
           x
         }
       )
@@ -434,7 +354,6 @@ if (exists("TEST") && is.logical(TEST) && TEST) {
   m = Compartmental$new(S, I, R)
   m$transition(I<-S ~ beta*S*I/N, N=S+I+R)
   m$transition(R<-I ~ gamma, percapita = TRUE)
-  m$where(N=S+I+R)
   print(m)
 }
 
