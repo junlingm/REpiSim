@@ -33,12 +33,14 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    simulate = function(fit, ic, parms) {
-      ic.filled = ic$value
-      ic.filled[ic$fit] = fit[ic$fit]
-      pars.filled = parms$value
-      pars.filled[parms$fit] = fit[parms$fit]
-      data = private$.simulator$simulate(private$.time, ic.filled, pars.filled, vars=private$.mapping)
+    # # the function that simulates the model given the fit info.
+    simulate = function(pars, formula, fixed, ...) {
+      # evaluate values given by the formula
+      vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
+      all = c(unlist(vf), unlist(pars), unlist(fixed))
+      ic = all[private$.model$compartments]
+      par = all[private$.model$parameters]
+      data = private$.simulator$simulate(private$.time, ic, par, vars=unlist(private$.mapping), ...)
       if (private$.cumulative) {
         if (ncol(data) == 2) diff(data[,2]) else
           as.data.frame(lapply(data[, -1], diff))
@@ -50,10 +52,71 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    ## The actual calibration is done in this function.
-    ## This method Must be implemented by subclasses.
-    .calibrate = function(pars, intial.values, parms, ...) {
+    #' The actual calibration is done in this function.
+    #' This method Must be implemented by subclasses.
+    #' @param fit the parameter values that should be fitted
+    #' @param formula gives the parameter values that should be calculated
+    #' using this formula
+    #' @param fixed the parameter values that are given
+    #' @return the fitting results, which will be passed to 
+    #' the intepret method.
+    .calibrate = function(fit, formula, fixed, ...) {
       NULL
+    },
+    
+    # split the parameters or initial conditions by type
+    # here x is the list or vector of parameters or initial conditions,
+    # mode specifies what values to split. If x does not 
+    # contain a named value, it will be fitted
+    split = function(x, mode=c("initial.value", "parameter")) {
+      mode = match.arg(mode, c("initial.value", "parameter"))
+      if (mode == "initial.value") {
+        set = private$.model$compartments
+      } else if (mode == "parameter") {
+        set = private$.model$parameters
+      } else stop("invalid mode: ", mode)
+      ns = names(x)
+      if (is.null(ns) || any(ns == ""))
+        stop(mode, "must be named")
+      extra = setdiff(ns, set)
+      if (length(extra) > 0)
+        stop(paste(extra, collapse = ", "), " not defined in the model")
+      idx.values = sapply(x, is.numeric)
+      idx.formula = sapply(x, function(y) is(y, "Expression"))
+      x.values = as.list(x[idx.values])
+      x.formula = x[idx.formula]
+      x.fit = setdiff(set, ns[idx.values | idx.formula])
+      list(value = x.values, formula = x.formula, fit = x.fit)
+    },
+    
+    # the calibrate method uses this function to infer the parameters that 
+    # needs to be fitted, those that need to be calculated from a formula, 
+    # and those that are fixed.
+    # this function returns a list with names formula, fit and fixed
+    # to be fitted, in addition to the remaining parameters in ...
+    fit.info = function(initial.values, parms, ...) {
+      ic = private$split(initial.values, mode="initial.value")
+      p = private$split(parms, mode="parameter")
+      if (length(ic$fit) == 0 && length(p$fit) == 0)
+        stop("no initial values or parameters to fit")
+      formula = c(ic$formula, p$formula)
+      if (length(formula) > 0) formula = formula[order(formula)]
+      # find all parameters from the formula
+      parms = Reduce(
+        function(extra, f) union(f$parms, extra), 
+        formula, 
+        init=character())
+      extra = setdiff(parms, c(private$.model$compartments, private$.model$parameters))
+      fit = c(extra, ic$fit, p$fit)
+      fixed = c(ic$value, p$value)
+      c(
+        list(
+          fit = fit,
+          formula = formula,
+          fixed = fixed
+        ),
+        list(...)
+      )
     }
   ),
   
@@ -64,7 +127,7 @@ Calibrator <- R6::R6Class(
     #' initial time) of the ODE solution that corresponds to the data, or a 
     #' character value giving the name of the column in data that corresponds 
     #' to time.
-    #' @param data a data.frame object containign the data for the calibration
+    #' @param data a data.frame object containing the data for the calibration
     #' @param ... each argument is a formula defining the maps between 
     #' the data columns and the model variables. Please see the details section.
     #' @param cumulative whether the data is cumulative
@@ -78,7 +141,7 @@ Calibrator <- R6::R6Class(
       m = model$clone(deep=TRUE)
       if (!is.data.frame(data))
         stop("data must be a data.frame object")
-      extra = setdiff(names(mapping), names(data))
+      extra = setdiff(names(mapping), colnames(data))
       if (length(extra) > 0)
         stop("data column", if(length(extra)==1) "" else "s", 
              " does not exist: ", paste(extra, collapse=", "))
@@ -127,7 +190,7 @@ Calibrator <- R6::R6Class(
       }
       private$.model = m
       private$.simulator = private$simulator(m)
-      private$.data = data[names(private$.mapping)]
+      private$.data = data[, names(private$.mapping)]
     },
     
     #' Calibrate the model to data
@@ -140,31 +203,8 @@ Calibrator <- R6::R6Class(
     #' estimated must contain a finite value.
     #' @param ... extra arguments to be passed to calibrators
     calibrate = function(initial.values, parms, ...) {
-      initial.values = initial.values[!is.na(initial.values)]
-      n = names(initial.values)
-      if (is.null(n) || any(n=="")) 
-        stop("initial values must be named")
-      extra = setdiff(n, private$.model$compartments)
-      if (length(extra) > 0)
-        stop("variable", if(length(extra)==1) "" else "s", 
-             " not defined in model: ", paste(extra, collapse=", "))
-      pars.ic = setdiff(private$.model$compartments, n)
-      parms = parms[!is.na(parms)]
-      n = names(parms)
-      if (is.null(n) || any(n=="")) 
-        stop("parameter values must be named")
-      extra = setdiff(n, self$parameters)
-      if (length(extra) > 0)
-        stop("parameter", if(length(extra)==1) "" else "s", 
-             " not defined in model: ", paste(extra, collapse=", "))
-      pars.parms = setdiff(self$parameters, n)
-      model.parms = intersect(n, private$.model$parameters)
-      pars = c(pars.ic, pars.parms)
-      private$.details = private$.calibrate(
-        pars, 
-        list(value=initial.values, fit=pars.ic),
-        list(value=parms, fit=intersect(pars.parms, private$.model$parameters)),
-        ...)
+      info = private$fit.info(initial.values, parms, ...)
+      private$.details = do.call(private$.calibrate, info)
       private$interpret(private$.details)
     }
   ),

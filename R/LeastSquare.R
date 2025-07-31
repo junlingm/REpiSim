@@ -9,33 +9,44 @@ LeastSquare <- R6::R6Class(
   private = list(
     # whether to fit in log scale
     .log = FALSE,
-    
-    objective = function(pars, initial.values, parms) {
-      x = private$simulate(pars, initial.values, parms)
+
+    objective = function(pars, formula, fixed, ...) {
+      x = private$simulate(pars, formula, fixed, ...)
       if (private$.log) x = log(x)
       if (is.data.frame(x)) {
         sum(sapply(1:ncol(x), function(i) {
-          sum((x[,i]-private$.data[,i])^2)
+          sum((x[,i]-private$.data[, i])^2)
         }))
-      } else sum((x-private$.data[1])^2)
+      } else sum((x-private$.data)^2)
     },
     
-    optimizer = function(pars, initial.values, parms, ...) {
-      optim(pars, private$objective, hessian=TRUE, 
-            initial.values=initial.values, parms=parms, ...)
+    optimizer = function(guess, formula, fixed, control=NULL, ...) {
+      args = list(...)
+      if (!is.null(control) && args$method == "Nelder-Mead") {
+        control$trace = 1
+        control$parscale=guess/10
+      }
+      optim(guess, private$objective, formula=formula, fixed=fixed, control=control, ...)
     },
     
     interpret = function(result) {
       if (result$convergence == 0) {
-        V = solve(result$hessian)
         p = result$par
-        x = sapply(names(p), function(n) {
-          m = p[[n]]
-          s = sqrt(V[n, n])
-          c(mean=m, "2.5%"=m-2*s, "97.5%"=m+2*s)
-        })
-        as.data.frame(t(x))
-      } else stop("Error (", result$convergence, "): ", result$message)
+        if (!is.null(result$hessian)) {
+          V = solve(result$hessian)
+          x = sapply(names(p), function(n) {
+            m = p[[n]]
+            s = sqrt(V[n, n])
+            c(mean=m, "2.5%"=m-2*s, "97.5%"=m+2*s)
+          })
+          as.data.frame(t(x))
+        } else {
+          data.frame(mean=p)
+        }
+      } else {
+        print(result)
+        stop("Error (", result$convergence, "): ", result$message)
+      }
     }
   ),
   

@@ -8,45 +8,54 @@ Optimizer <- R6::R6Class(
       ODE$new(model)
     },
     
-    objective = function(pars, ...) {
+    #' The objective function for optimization
+    #' This method must be implemented by subclasses.
+    #' @param par the values of the fitted parameters
+    #' @param formula gives the parameter values that should be calculated
+    #' using this formula
+    #' @param fixed the parameter values that are given
+    #' @return the fitting results, which will be passed to 
+    #' the intepret method.
+    objective = function(par, formula, fixed, ...) {
       stop("The objective method must be implemented by a subclass")
     },
     
-    optimizer = function(pars, initial.values, parms, ...) {
+    #' The optimization is done in this function.
+    #' This method must be implemented by subclasses.
+    #' @param guess the initial guesses of the fitted parameters
+    #' @param formula gives the parameter values that should be calculated
+    #' using this formula
+    #' @param fixed the parameter values that are given
+    #' @return the fitting results, which will be passed to 
+    #' the intepret method.
+    optimizer = function(guess, formula, fixed, ...) {
       stop("The optimizer method must be implemented by a subclass")
     },
     
-    .calibrate = function(pars, initial.values, parms, guess, ...) {
+    #' The actual calibration is done in this function.
+    #' This method Must be implemented by subclasses.
+    #' @param fit the parameter values that should be fitted
+    #' @param formula gives the parameter values that should be calculated
+    #' using this formula
+    #' @param fixed the parameter values that are given
+    #' @param guess the initial guess of the parameters to be fitted
+    #' @return the fitting results, which will be passed to 
+    #' the intepret method.
+    .calibrate = function(fit, formula, fixed, guess, ...) {
       if (!is.numeric(guess) || any(is.na(guess)))
         stop("invalid initial values")
       ng = names(guess)
       if (is.null(ng) || any(ng=="")) 
         stop("initial guesses must be named")
-      extra = setdiff(pars, ng)
+      extra = setdiff(fit, ng)
       if (length(extra) > 0)
         stop("variable", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(ng, pars)
+      miss = setdiff(ng, fit)
       if (length(miss) > 0)
         stop("missing initial guess", if(length(miss)==1) "" else "es", ": ", 
              paste(miss, collapse=", "))
-      private$optimizer(guess[pars], initial.values=initial.values, parms=parms, ...)
-    }
-  ),
-  
-  public = list (
-    #' Calibrate the model to data
-    #' 
-    #' @param initial.values the initial values for the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param parms the parameter values of the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param guess the initial guess of the parameters to be fitted
-    #' @param ... extra arguments to be passed to calibrators
-    calibrate = function(initial.values, parms, guess, ...) {
-      super$calibrate(initial.values, parms, guess, ...)
+      private$optimizer(guess, formula, fixed, ...)
     }
   )
 )
