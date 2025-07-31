@@ -72,9 +72,10 @@ NBinom <- R6Class(
     #' @param x the value to calculate the likelihood
     #' @param mean the mean of the negative binomial distribution
     #' @param size the size parameter of the negative binomial distribution
-    logL = function(x, mean, size) {
-      if (any(mean<0) || any(!is.finite(mean)) || size<=0) -Inf else {
-        sum(dnbinom(x, size=size, mu=mean, log=TRUE))
+    logL = function(x, mean, prob) {
+      if (any(mean<0) || any(!is.finite(mean)) || prob<=0) -Inf else {
+        size = mean * prob / (1-prob)
+        sum(dnbinom(x, size=size, prob=prob, log=TRUE))
       }
     }
   ),
@@ -82,7 +83,7 @@ NBinom <- R6Class(
   active = list(
     #' @field par return a vector of parameter names for this likelihood
     par = function() {
-      "size"
+      "prob"
     }
   )
 )
