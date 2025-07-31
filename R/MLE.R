@@ -1,16 +1,3 @@
-likelihood = function(likelihood, data, simulate, pars, initial.values, parms) {
-  pars.l = pars[likelihood$par]
-  pars.l = pars.l[!is.na(pars.l)]
-  if (length(pars.l) == 0) pars.l = parms$value[likelihood$par]
-  logL = likelihood$logL
-  x = simulate(pars, initial.values, parms)
-  if (is.data.frame(x)) {
-    sum(sapply(1:ncol(x), function(i) {
-      logL(data[,i], x[,i], pars.l)
-    }))
-  } else logL(data[,1], x, pars.l)
-}
-
 #' A maximum likelihood calibrator using the bbmle package
 #' @name MLE
 #' @docType class
@@ -22,27 +9,37 @@ MLE <- R6Class(
   private = list(
     .likelihood = NULL,
     
-    objective = function(pars, initial.values, parms) {
-      -likelihood(private$.likelihood, private$.data, private$simulate, 
-                 pars, initial.values, parms)
+    objective = function(pars, formula, fixed, ...) {
+      vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
+      all = c(unlist(pars), unlist(vf), unlist(fixed))
+      pars.l = all[private$.likelihood$par]
+      logL = private$.likelihood$logL
+      x = private$simulate(all, NULL, NULL, ...)
+      if (is.data.frame(x)) {
+        sum(sapply(1:ncol(x), function(i) {
+          -logL(private$.data[,i], x[,i], pars.l)
+        }))
+      } else -logL(private$.data, x, pars.l)
     },
     
-    optimizer = function(pars, initial.values, parms, neglogL, ...) {
-      args = names(pars)
+    optimizer = function(guess, formula, fixed, ...) {
+      args = names(guess)
       arglist = list(as.name("c"))
       for (arg in args) arglist[[arg]] = as.name(arg)
       body = call("{",
         call("<-", as.name("pars"), as.call(arglist)),
-        quote(private$objective(pars, initial.values, parms))
+        quote(private$objective(pars, formula, fixed))
       )
       neglogL = as.function(c(
-        as.list(pars),
+        as.list(guess),
         body
       ))
       e = new.env()
+      e$fixed = fixed
+      e$formula = formula
       e$private = private
       environment(neglogL)=e
-      mle2(neglogL, as.list(pars), ...)
+      mle2(neglogL, as.list(guess), ...)
     },
     
     interpret = function(result) {
@@ -59,6 +56,28 @@ MLE <- R6Class(
         }
         as.data.frame(cbind(mean=coef(result), ci))
       } else stop("Error (", details$convergence, "): ", details$message)
+    },
+    
+    fit.info = function(initial.values, parms, ...) {
+      # split private$.likelihood$par from parms
+      parms = as.list(parms)
+      v = parms[private$.likelihood$par]
+      for (i in private$.likelihood$par) {
+        parms[[i]] = NULL
+      }
+      info = super$fit.info(initial.values, parms, ...)
+      for (i in private$.likelihood$par) {
+        if (is.na(v[[i]]) || is.null(v[[i]])) {
+          info$fit = c(info$fit, i)
+        } else if (is(v[[i]], "Expression")) {
+          info$formula = c(info$formula, v[i])
+        } else if (is.numeric(v[[i]])) {
+          info$fixed[[i]] = v[[i]]
+        } else {
+          stop("Invalid value for likelihood parameter ", i, ": ", v[[i]])
+        }
+      }
+      info
     }
   ),
   
