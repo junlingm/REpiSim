@@ -8,8 +8,6 @@
 #' @name Calibrator
 #' @docType class
 #' @export
-#' 
-
 Calibrator <- R6::R6Class(
   "Calibrator",
   private = list(
@@ -33,7 +31,7 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    # # the function that simulates the model given the fit info.
+    ## the function that simulates the model given the fit info.
     simulate = function(pars, formula, fixed, ...) {
       # evaluate values given by the formula
       vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
@@ -52,14 +50,14 @@ Calibrator <- R6::R6Class(
       NULL
     },
     
-    #' The actual calibration is done in this function.
-    #' This method Must be implemented by subclasses.
-    #' @param fit the parameter values that should be fitted
-    #' @param formula gives the parameter values that should be calculated
-    #' using this formula
-    #' @param fixed the parameter values that are given
-    #' @return the fitting results, which will be passed to 
-    #' the intepret method.
+    ## The actual calibration is done in this function.
+    ## This method Must be implemented by subclasses.
+    ## @param fit the parameter values that should be fitted
+    ## @param formula gives the parameter values that should be calculated
+    ## using this formula
+    ## @param fixed the parameter values that are given
+    ## @return the fitting results, which will be passed to 
+    ## the intepret method.
     .calibrate = function(fit, formula, fixed, ...) {
       NULL
     },
@@ -121,7 +119,7 @@ Calibrator <- R6::R6Class(
   ),
   
   public = list(
-    #' @description initializer
+    #' initializer
     #' @param model the model to calibrate
     #' @param time either a numeric vector containing the times (including the 
     #' initial time) of the ODE solution that corresponds to the data, or a 
