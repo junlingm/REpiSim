@@ -26,21 +26,25 @@
 #' @export
 `%/%` <- function(a, b) UseMethod("%/%", a)
 
+#' @export
 `%+%.Expression` <- function(a, b) {
   x = a$clone()
   x$add(b)
 }
 
+#' @export
 `%-%.Expression` <- function(a, b) {
   x = a$clone()
   x$sub(b)
 }
 
+#' @export
 `%*%.Expression` <- function(a, b) {
   x = a$clone()
   x$mul(b)
 }
 
+#' @export
 `%/%.Expression` <- function(a, b) {
   x = a$clone()
   x$div(b)
