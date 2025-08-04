@@ -1,0 +1,224 @@
+#' An R6 class that defines a distribution to be used as either a likelihood or a prior.
+#' 
+#' @details Each Distribution object must provide two methods, a "log.density" method
+#' which is the log-density function. In addition, a "log.likelihood" method which is
+#' the log-likelihood function and the distirbution parameters
+#' @name Distribution
+#' @docType class
+#' @export
+
+Distribution <- R6Class(
+  "Distribution",
+  public = list(
+    #' @param ... the parameters needed to specify the distribution. 
+    #' @param .density the density function
+    #' @details to use this object as a likelihood, additional parameters that are needed must
+    #' be provided as NA, while the other parameters that needs to be inferred from the mean
+    #' and the estimated parameters must be provided as a formula
+    initialize = function(..., .density) {
+      if (is.null(.density))
+        stop(".density must be provided to initialize a Distribution object")
+      args = list(...)
+      ns = names(args)
+      if (is.null(ns) || any(ns=="")) 
+        stop("Distribution parameters must be named")
+      # is this a distribution? if so, then the arguments in ... must all be numeric
+      if (all(is.numeric(unlist(args)))) {
+        call.args = c(x=as.name("x"), args, log=TRUE)
+        self$log.density = function(x) {
+          do.call(.density, call.args)
+        }
+      } else { # otherwise, this is a likelihood
+        call.args = list(x=NA, mean=NA)
+        par = list()
+        for (n in ns) {
+          v = args[[n]]
+          if (!is.call(v) && !is.name(v) && is.na(v)) {
+            if (n != "mean") call.args[[n]] = NA
+            par[[n]] = as.name(n)
+          } else par[[n]] = v
+        }
+        density = as.call(c(
+          list(as.name(".density"), as.name("x")), 
+          par, log=TRUE
+        ))
+        body = as.call(c(as.name("sum"), density))
+        call.args = c(call.args, body)
+        self$log.likelihood = as.function(call.args)
+      }
+    },
+    
+    ## @description The log-likelihood function
+    ## @param x the observation to calculate the likelihood
+    ## @param mean the mean of the distribution. This typically corresponds to the model solution
+    ## @param ... the parameters of the distribution,  in addition to the mean, to calculate the 
+    ## likelihood
+    ## @return the log likelihood
+    log.likelihood = NULL,
+    
+    ## the log-density function
+    ## @param x the value where the density is evaluated at
+    ## @return a the log-density at x
+    ## is the log-density
+    log.density = NULL
+  )
+)
+
+#' The Poisson distribution
+#' 
+#' @name Poisson
+#' @docType class
+#' @export
+
+Poisson <- R6Class(
+  "Poisson",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param lambda the mean of the Poisson distribution. When getting the log-likelihood,
+    #' this parameter is unused.
+    initialize = function(lambda) {
+      if (missing(lambda) || is.na(lambda)) lambda = quote(mean)
+      super$initialize(lambda = lambda, .density = dpois)
+    }
+  )
+)
+
+#' The negative binomial distribution
+#' 
+#' @name NBinom
+#' @docType class
+#' @export
+
+NBinom <- R6Class(
+  "NBinom",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param size the size parameter of the negative binomial distribution
+    #' @param prob the probability parameter of the negative binomial distribution
+    initialize = function(size, prob) {
+      if (missing(size)) {
+        size = quote(mean*prob/(1-prob))
+      } else if (missing(prob)) {
+        prob = quote(size/(mean+size))
+      }
+      super$initialize(size = size, prob = prob, .density = dnbinom)
+    }
+  )
+)
+
+#' The normal distribution
+#' 
+#' @name Normal
+#' @docType class
+#' @export
+#' 
+
+Normal <- R6Class(
+  "Normal",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param mean the mean of the normal distribution
+    #' @param sd the standard deviation of the normal distribution
+    initialize = function(mean, sd) {
+      if (missing(mean)) {
+        mean = quote(mean)
+      } else if (missing(sd)) {
+        stop("the standard deviation must be provided for the normal distribution")
+      }
+      super$initialize(mean = mean, sd = sd, .density = dnorm)
+    }
+  )
+)
+
+#' The uniform distribution
+#' @name Uniform
+#' @docType class
+#' @export
+
+Uniform <- R6Class(
+  "Uniform",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param min the minimum value of the uniform distribution
+    #' @param max the maximum value of the uniform distribution
+    initialize = function(min, max) {
+      if (missing(min)) {
+        min = quote(2*mean - max)
+      } else if (missing(max)) {
+        max = quote(2*mean + min)
+      }
+      super$initialize(min = min, max = max, .density = dunif)
+    }
+  )
+)
+
+#' The exponential distribution
+#' @name Exponential
+#' @docType class
+#' @export
+
+Exponential <- R6Class(
+  "Exponential",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param rate the rate parameter of the exponential distribution
+    initialize = function(rate) {
+      if (missing(rate)) {
+        rate = quote(1/mean)
+      }
+      super$initialize(rate = rate, .density = dexp)
+    }
+  )
+)
+
+#' The gamma distribution
+#' @name Gamma
+#' @docType class
+#' @export
+
+Gamma <- R6Class(
+  "Gamma",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param shape the shape parameter of the gamma distribution
+    #' @param scale the scale parameter of the gamma distribution, i.e., 1/rate
+    initialize = function(shape, scale) {
+      if (missing(shape)) {
+        shape = quote(mean/scale)
+      } else if (missing(scale)) {
+        scale = quote(mean/shape)
+      }
+      super$initialize(shape = shape, scale = scale, .density = dgamma)
+    }
+  )
+)
+
+#' The beta distribution
+#' @name Beta
+#' @docType class
+#' @export
+
+Beta <- R6Class(
+  "Beta",
+  inherit = Distribution,
+  
+  public = list(
+    #' @param shape1 the first shape parameter of the beta distribution
+    #' @param shape2 the second shape parameter of the beta distribution
+    initialize = function(shape1, shape2) {
+      if (missing(shape1)) {
+        # mean = shape1/(shape1 + shape2). calculate shape1 in terms of mean and shape2
+        shape1 = quote(mean/(1-mean)*shape2)
+      } else if (missing(shape2)) {
+        shape2 = quote((1-mean)/mean*a)
+      }
+      super$initialize(shape1 = shape1, shape2 = shape2, .density = dbeta)
+    }
+  )
+)
