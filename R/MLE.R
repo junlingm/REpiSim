@@ -8,18 +8,24 @@ MLE <- R6Class(
   
   private = list(
     .likelihood = NULL,
+    .par.likelihood = NULL,
     
     objective = function(pars, formula, fixed, ...) {
       vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
       all = c(unlist(pars), unlist(vf), unlist(fixed))
-      pars.l = all[private$.likelihood$par]
-      logL = private$.likelihood$logL
+      pars.l = all[private$.par.likelihood]
       x = private$simulate(all, NULL, NULL, ...)
       if (is.data.frame(x)) {
-        sum(sapply(1:ncol(x), function(i) {
-          -logL(private$.data[,i], x[,i], pars.l)
+        -sum(sapply(1:ncol(x), function(i) {
+          do.call(
+            private$.likelihood$log.likelihood, 
+            c(list(private$.data[,i], x[,i], pars.l))
+          )
         }))
-      } else -logL(private$.data, x, pars.l)
+      } else -do.call(
+        private$.likelihood$log.likelihood,
+        c(list(private$.data, x), pars.l)
+      )
     },
     
     optimizer = function(guess, formula, fixed, ...) {
@@ -61,12 +67,12 @@ MLE <- R6Class(
     fit.info = function(initial.values, parms, ...) {
       # split private$.likelihood$par from parms
       parms = as.list(parms)
-      v = parms[private$.likelihood$par]
-      for (i in private$.likelihood$par) {
+      v = parms[private$.par.likelihood]
+      for (i in private$.par.likelihood) {
         parms[[i]] = NULL
       }
       info = super$fit.info(initial.values, parms, ...)
-      for (i in private$.likelihood$par) {
+      for (i in private$.par.likelihood) {
         if (is.na(v[[i]]) || is.null(v[[i]])) {
           info$fit = c(info$fit, i)
         } else if (is(v[[i]], "Expression")) {
@@ -100,9 +106,11 @@ MLE <- R6Class(
     #' expression to calculate from the model variables.)
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
       library(bbmle)
-      if (!"Likelihood" %in% class(likelihood)) 
-        stop("likelihood must be a Likelihood object")
+      if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
+        stop("likelihood must be a Distribution object")
       private$.likelihood = likelihood
+      l = formals(likelihood$log.likelihood)
+      if (length(l) >= 3) private$.par.likelihood = names(l[3:length(l)])
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     }
   ),
