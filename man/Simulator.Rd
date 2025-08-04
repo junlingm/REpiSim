@@ -14,6 +14,9 @@ The main method is `simulate`.
 
 the Simulation class is an abstract class. It's constructor
 should not be explicitly called.
+
+Functions used by the model must be explicited attached using the attach.function 
+function provided by this package.
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}

@@ -25,7 +25,6 @@ ode$simulate(
   y0=c(S=10000, I=1, R=0), 
   parms=c(beta=0.4, gamma=0.2), 
   alias = FALSE) # N is not returned.
-
 }
 \section{Super classes}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{\link[REpiSim:ODE]{REpiSim::ODE}} -> \code{Equilibrium}

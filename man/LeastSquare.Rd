@@ -22,7 +22,7 @@ The calibrator using the least square method.
 \if{html}{\out{
 <details open><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Optimizer" data-id="calibrate"><a href='../../REpiSim/html/Optimizer.html#method-Optimizer-calibrate'><code>REpiSim::Optimizer$calibrate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Calibrator" data-id="calibrate"><a href='../../REpiSim/html/Calibrator.html#method-Calibrator-calibrate'><code>REpiSim::Calibrator$calibrate()</code></a></span></li>
 </ul>
 </details>
 }}

@@ -24,6 +24,13 @@ constructor
 \itemize{
 \item \href{#method-Expression-new}{\code{Expression$new()}}
 \item \href{#method-Expression-substitute}{\code{Expression$substitute()}}
+\item \href{#method-Expression-rename}{\code{Expression$rename()}}
+\item \href{#method-Expression-assign}{\code{Expression$assign()}}
+\item \href{#method-Expression-add}{\code{Expression$add()}}
+\item \href{#method-Expression-sub}{\code{Expression$sub()}}
+\item \href{#method-Expression-negate}{\code{Expression$negate()}}
+\item \href{#method-Expression-mul}{\code{Expression$mul()}}
+\item \href{#method-Expression-div}{\code{Expression$div()}}
 \item \href{#method-Expression-clone}{\code{Expression$clone()}}
 }
 }
@@ -62,10 +69,145 @@ Perform a substitute}
 \subsection{Details}{
 For each name in the list, the variable with that name in the
 expression is replaced by the corresponding value in the list.
+rename a parameter or a function to a new name
 }
 
 \subsection{Returns}{
 an expression with the substitution
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-rename"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-rename}{}}}
+\subsection{Method \code{rename()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$rename(from, to)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{from}}{the name to rename}
+
+\item{\code{to}}{the new name}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+an invisible self
+assign the value of an expression
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-assign"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-assign}{}}}
+\subsection{Method \code{assign()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$assign(e)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{e}}{the expression to assign}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+self
+add b to this expression
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-add"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-add}{}}}
+\subsection{Method \code{add()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$add(b)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{b}}{a number, a anme or a call.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+self
+subtract an expression from this one
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-sub"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-sub}{}}}
+\subsection{Method \code{sub()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$sub(b)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{b}}{the value to subtract}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+self
+negate the expression
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-negate"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-negate}{}}}
+\subsection{Method \code{negate()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$negate()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+self
+multiple by a factor
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-mul"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-mul}{}}}
+\subsection{Method \code{mul()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$mul(b)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{b}}{the value to multiply by}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+self
+divide by a factor
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Expression-div"></a>}}
+\if{latex}{\out{\hypertarget{method-Expression-div}{}}}
+\subsection{Method \code{div()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Expression$div(b)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{b}}{the value to divide by}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+self
 }
 }
 \if{html}{\out{<hr>}}

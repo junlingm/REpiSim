@@ -102,17 +102,6 @@ SIR$compartment(S ~ -beta*S*I/N)$
 SIR$rename(S->U)$rename(beta->b)
 print(SIR)
 }
-\section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{restricted}}{a boolean variable indicating whether to restrict functions 
-allowed to be used in the ODE system. Default to FALSE}
-
-\item{\code{attached.functions}}{the list of provided R functions to be used in
-the model}
-}
-\if{html}{\out{</div>}}
-}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
@@ -122,17 +111,17 @@ the model}
 
 \item{\code{parameters}}{A read-only field that returns a character vector of parameter names}
 
-\item{\code{substitutions}}{A read-only field that returns a named list of expressions}
+\item{\code{substitutions}}{A read-only field that returns a named list of expressions
+Note that the order is sorted by dependence. That is, if a substitution uses the
+value of another, then it appears after the other. In addition, if a substitution
+depends on a compartment, then it has an attribute named "compartment" which 
+equals TRUE}
 
 \item{\code{representation}}{a read-only active field that returns the representation of the model
 it returns a list that contains the equations substitutions. The compartmental model can 
 then be reconstructed from the representation.}
 
-\item{\code{order}}{a read-only active field that returns the order of the equations
-and aliases that must appear to satisfy dependencies in calculation}
-
-\item{\code{missing}}{a read-only field that returns the names of functions defined 
-neither in the global environment, nor in the attached.functions list.}
+\item{\code{functions}}{return the functions used by this model}
 
 \item{\code{t}}{the independent variable anme}
 }
@@ -158,7 +147,7 @@ constructor
 
 It constructs a Model object with compartments and substitutions.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$new(..., t = "t", functions = NULL, file = NULL, .restricted = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$new(..., t = "t", file = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -170,13 +159,8 @@ if it is a formula with the form `name ~ value`, or passed to the
 
 \item{\code{t}}{the name of the independent variable, either a name or a string}
 
-\item{\code{functions}}{a list of functions to be used in this model}
-
 \item{\code{file}}{if not NULL, a path or connection to a model file 
 to read the model from}
-
-\item{\code{.restricted}}{a boolean variable indicating whether the ODE system
-only has access to a limited set of functions. Default to TRUE}
 }
 \if{html}{\out{</div>}}
 }

@@ -134,7 +134,7 @@ self$substitutions. The compartmental model can then be reconstructed from the r
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Compartmental$new(..., t = "t", functions = NULL, file = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Compartmental$new(..., t = "t", file = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -143,8 +143,6 @@ constructor
 \item{\code{...}}{the names of the compartment, or substitutions}
 
 \item{\code{t}}{the name of the independent variable, either a name or a string}
-
-\item{\code{functions}}{a list of functions to be used in this model}
 
 \item{\code{file}}{if not NULL, a path or connection to a model file 
 to read the model from}

@@ -37,7 +37,6 @@ model solutions to observation variables.
 \if{html}{\out{<a id="method-Calibrator-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Calibrator-new}{}}}
 \subsection{Method \code{new()}}{
-initializer
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Calibrator$new(
   model,
@@ -59,7 +58,7 @@ initial time) of the ODE solution that corresponds to the data, or a
 character value giving the name of the column in data that corresponds 
 to time.}
 
-\item{\code{data}}{a data.frame object containign the data for the calibration}
+\item{\code{data}}{a data.frame object containing the data for the calibration}
 
 \item{\code{...}}{each argument is a formula defining the maps between 
 the data columns and the model variables. Please see the details section.}
