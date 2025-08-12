@@ -11,8 +11,11 @@ MLE <- R6Class(
     .par.likelihood = NULL,
     
     objective = function(pars, formula, fixed, ...) {
-      vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
-      all = c(unlist(pars), unlist(vf), unlist(fixed))
+      all = c(as.list(pars), fixed)
+      for (n in names(formula)) {
+        f = formula[[n]]
+        all[[n]] = eval(f$expr, envir = all)
+      }
       pars.l = all[private$.par.likelihood]
       x = private$simulate(all, NULL, NULL, ...)
       if (is.data.frame(x)) {
@@ -105,7 +108,8 @@ MLE <- R6Class(
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
-      library(bbmle)
+      if (!require(bbmle))
+        stop("bbmle package is required for MLE calibration")
       if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
         stop("likelihood must be a Distribution object")
       private$.likelihood = likelihood
