@@ -31,18 +31,38 @@ Distribution <- R6Class(
       } else { # otherwise, this is a likelihood
         call.args = list(x=NA, mean=NA)
         par = list()
+        extra = character() # parameters in formula
+        expr = list() #$ the list of formula defining parameters
         for (n in ns) {
           v = args[[n]]
-          if (!is.call(v) && !is.name(v) && is.na(v)) {
+          if (is.call(v)) {
+            e = Expression$new(v)
+            expr[[n]] = e
+            extra = c(extra, e$parms)
+            par[[n]] = as.name(n)
+          } else if (is.name(v)) {
+            extra = c(extra, v)
+            par[[n]] = as.name(n)
+          } else if (is.na(v)) {
             if (n != "mean") call.args[[n]] = NA
             par[[n]] = as.name(n)
           } else par[[n]] = v
         }
+        expr = expr[order(expr)]
+        # statements calculating parameters
+        stmt = sapply(names(expr), function(n) {
+          e = expr[[n]]
+          call("<-", as.name(n), e$expr)
+        })
+        # add in parameters in the formula
+        extra = setdiff(extra, ns)
+        if (length(extra) > 0) call.args[extra] = NA
         density = as.call(c(
           list(as.name(".density"), as.name("x")), 
           par, log=TRUE
         ))
-        body = as.call(c(as.name("sum"), density))
+        sum = call("sum", density)
+        body <- as.call(c(as.name("{"), stmt, sum))
         call.args = c(call.args, body)
         self$log.likelihood = as.function(call.args)
       }
