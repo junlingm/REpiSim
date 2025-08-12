@@ -34,9 +34,12 @@ Calibrator <- R6::R6Class(
     ## the function that simulates the model given the fit info.
     simulate = function(pars, formula, fixed, ...) {
       # evaluate values given by the formula
-      vf = sapply(formula, function(f) eval(f$expr, envir = c(as.list(pars), fixed)))
-      all = c(unlist(vf), unlist(pars), unlist(fixed))
-      ic = all[private$.model$compartments]
+      all = c(as.list(pars), fixed)
+      for (n in names(formula)) {
+        f = formula[[n]]
+        all[[n]] = eval(f$expr, envir = all)
+      }
+      ic = unlist(all[private$.model$compartments])
       par = all[private$.model$parameters]
       data = private$.simulator$simulate(private$.time, ic, par, vars=unlist(private$.mapping), ...)
       if (private$.cumulative) {
@@ -95,8 +98,6 @@ Calibrator <- R6::R6Class(
     fit.info = function(initial.values, parms, ...) {
       ic = private$split(initial.values, mode="initial.value")
       p = private$split(parms, mode="parameter")
-      if (length(ic$fit) == 0 && length(p$fit) == 0)
-        stop("no initial values or parameters to fit")
       formula = c(ic$formula, p$formula)
       if (length(formula) > 0) formula = formula[order(formula)]
       # find all parameters from the formula
@@ -106,6 +107,8 @@ Calibrator <- R6::R6Class(
         init=character())
       extra = setdiff(parms, c(private$.model$compartments, private$.model$parameters))
       fit = c(extra, ic$fit, p$fit)
+      if (length(fit) == 0)
+        stop("no initial values or parameters to fit")
       fixed = c(ic$value, p$value)
       c(
         list(
