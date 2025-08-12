@@ -47,11 +47,11 @@ Optimizer <- R6::R6Class(
       ng = names(guess)
       if (is.null(ng) || any(ng=="")) 
         stop("initial guesses must be named")
-      extra = setdiff(fit, ng)
+      extra = setdiff(ng, fit)
       if (length(extra) > 0)
         stop("variable", if(length(extra)==1) "" else "s", 
              " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(ng, fit)
+      miss = setdiff(fit, ng)
       if (length(miss) > 0)
         stop("missing initial guess", if(length(miss)==1) "" else "es", ": ", 
              paste(miss, collapse=", "))
