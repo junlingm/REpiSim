@@ -3,8 +3,10 @@
 \docType{class}
 \name{Baysian}
 \alias{Baysian}
-\title{Calibrate the model to data}
+\title{A calibrator that uses a Baysian method.}
 \description{
+A calibrator that uses a Baysian method.
+
 A calibrator that uses a Baysian method.
 }
 \section{Super class}{
@@ -35,6 +37,7 @@ A calibrator that uses a Baysian method.
 \if{html}{\out{<a id="method-Baysian-calibrate"></a>}}
 \if{latex}{\out{\hypertarget{method-Baysian-calibrate}{}}}
 \subsection{Method \code{calibrate()}}{
+Calibrate the model to data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Baysian$calibrate(initial.values, parms, priors, guess, ...)}\if{html}{\out{</div>}}
 }

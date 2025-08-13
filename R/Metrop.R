@@ -9,30 +9,36 @@ Metrop <- R6::R6Class(
   private = list(
     .likelihood = NULL,
     
-    logL = function(pars, initial.values, parms, names) {
-      n = names(private$.priors)
-      names(pars) = names
-      likelihood(private$.likelihood, private$.data, private$simulate, 
-                 pars, initial.values, parms) +
-        sum(sapply(1:length(n), function(i) {
-          x = pars[[n[[i]]]]
-          private$.priors[[i]]$log.density(x, pars)
+    objective = function(pars, formula, fixed, priors, ...) {
+      names(pars) = names(priors)
+      all = c(as.list(pars), fixed)
+      for (n in names(formula)) {
+        f = formula[[n]]
+        all[[n]] = eval(f$expr, envir = all)
+      }
+      pars.l = all[private$.par.likelihood]
+      x = private$simulate(all, NULL, NULL, ...)
+      ll = if (is.data.frame(x)) {
+        sum(sapply(1:ncol(x), function(i) {
+          do.call(
+            private$.likelihood$log.likelihood, 
+            c(list(private$.data[,i], x[,i], pars.l))
+          )
         }))
+      } else do.call(
+        private$.likelihood$log.likelihood,
+        c(list(private$.data, x), pars.l)
+      )
+      ll + sum(sapply(names(priors), function(n) priors[[n]]$log.density(all[[n]]) ))
     },
     
-    metrop = function(logL, guess, initial.values, parms, ...) {
-      x = metrop(logL, guess, ..., 
-                 initial.values=initial.values, 
-                 parms=parms, 
-                 names=names(guess))
+    .calibrate = function(guess, formula, fixed, priors, ...) {
+      x = metrop(private$objective, guess, ..., 
+                 formula=formula,
+                 fixed=fixed,
+                 priors = priors)
       colnames(x$batch) = names(guess)
-      x$initial.values=initial.values
-      x$parms=parms
       x
-    },
-    
-    fit = function(guess, initial.values, parms, ...) {
-      private$metrop(private$logL, guess, initial.values, parms, ...)
     },
     
     interpret = function(result) {
@@ -64,8 +70,8 @@ Metrop <- R6::R6Class(
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
       library(mcmc)
       library(coda)
-      if (!"Likelihood" %in% class(likelihood)) 
-        stop("likelihood must be a Likelihood object")
+      if (!"Distribution" %in% class(likelihood)) 
+        stop("likelihood must be a Distribution object")
       private$.likelihood = likelihood
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     },
