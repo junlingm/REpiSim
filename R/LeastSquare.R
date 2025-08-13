@@ -4,7 +4,7 @@
 #' @export
 LeastSquare <- R6::R6Class(
   "LeastSquare",
-  inherit = Optimizer,
+  inherit = Calibrator,
   
   private = list(
     # whether to fit in log scale
