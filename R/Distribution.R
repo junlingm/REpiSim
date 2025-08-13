@@ -9,6 +9,12 @@
 
 Distribution <- R6Class(
   "Distribution",
+  private = list(
+    ## the log likelihood
+    .log.likelihood = NULL,
+    ## the log density
+    .log.density = NULL
+  ),
   public = list(
     #' @param ... the parameters needed to specify the distribution. 
     #' @param .density the density function
@@ -25,7 +31,7 @@ Distribution <- R6Class(
       # is this a distribution? if so, then the arguments in ... must all be numeric
       if (all(is.numeric(unlist(args)))) {
         call.args = c(x=as.name("x"), args, log=TRUE)
-        self$log.density = function(x) {
+        private$.log.density = function(x) {
           do.call(.density, call.args)
         }
       } else { # otherwise, this is a likelihood
@@ -64,23 +70,31 @@ Distribution <- R6Class(
         sum = call("sum", density)
         body <- as.call(c(as.name("{"), stmt, sum))
         call.args = c(call.args, body)
-        self$log.likelihood = as.function(call.args)
+        private$.log.likelihood = as.function(call.args)
       }
+    }
+  ),
+  active = list(
+    #' @field log.likelihood The log-likelihood function, which takes as least two parameters:
+    #' 
+    #' x the observation to calculate the likelihood
+    #' 
+    #' mean the mean of the distribution. This typically corresponds to the model solution
+    #' 
+    #' ... the parameters of the distribution,  in addition to the mean, to calculate the 
+    #' likelihood
+    #' 
+    #' It return the log likelihood
+    log.likelihood = function() {
+      private$.log.likelihood
     },
-    
-    ## @description The log-likelihood function
-    ## @param x the observation to calculate the likelihood
-    ## @param mean the mean of the distribution. This typically corresponds to the model solution
-    ## @param ... the parameters of the distribution,  in addition to the mean, to calculate the 
-    ## likelihood
-    ## @return the log likelihood
-    log.likelihood = NULL,
-    
-    ## the log-density function
-    ## @param x the value where the density is evaluated at
-    ## @return a the log-density at x
-    ## is the log-density
-    log.density = NULL
+
+    #' @field log.density the log-density function that takes a single paramter x,  which is
+    #' the value where the density is evaluated at.
+    #' it returns the log-density at x
+    log.density = function() {
+      private$.log.density
+    }
   )
 )
 
