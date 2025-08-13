@@ -37,6 +37,7 @@ model solutions to observation variables.
 \if{html}{\out{<a id="method-Calibrator-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Calibrator-new}{}}}
 \subsection{Method \code{new()}}{
+initializer
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Calibrator$new(
   model,

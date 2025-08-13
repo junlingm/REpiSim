@@ -14,6 +14,26 @@ Each Distribution object must provide two methods, a "log.density" method
 which is the log-density function. In addition, a "log.likelihood" method which is
 the log-likelihood function and the distirbution parameters
 }
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{log.likelihood}}{The log-likelihood function, which takes as least two parameters:
+
+x the observation to calculate the likelihood
+
+mean the mean of the distribution. This typically corresponds to the model solution
+
+... the parameters of the distribution,  in addition to the mean, to calculate the 
+likelihood
+
+It return the log likelihood}
+
+\item{\code{log.density}}{the log-density function that takes a single paramter x,  which is
+the value where the density is evaluated at.
+it returns the log-density at x}
+}
+\if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
