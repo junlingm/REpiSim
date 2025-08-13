@@ -9,6 +9,7 @@ MLE <- R6Class(
   private = list(
     .likelihood = NULL,
     .par.likelihood = NULL,
+    .CI = TRUE,
     
     objective = function(pars, formula, fixed, ...) {
       all = c(as.list(pars), fixed)
@@ -58,15 +59,17 @@ MLE <- R6Class(
     interpret = function(result) {
       details = result@details
       if (details$convergence == 0) {
-        ci = confint(result)
-        if ("mle2" %in% class(ci)) {
-          x = coef(ci)
-          n = names(coef(result))
-          error = paste(sapply(1:length(x), function(i) {
-            paste0(n[[i]], "=", x[[i]])
-          }), collapse=", ")
-          stop("a better result is found: ", error)
-        }
+        if (private$.CI) {
+          ci = confint(result)
+          if ("mle2" %in% class(ci)) {
+            x = coef(ci)
+            n = names(coef(result))
+            error = paste(sapply(1:length(x), function(i) {
+              paste0(n[[i]], "=", x[[i]])
+            }), collapse=", ")
+            stop("a better result is found: ", error)
+          }
+        } else ci = NULL
         as.data.frame(cbind(mean=coef(result), ci))
       } else stop("Error (", details$convergence, "): ", details$message)
     },
@@ -107,11 +110,12 @@ MLE <- R6Class(
     #' the data columns and the model variables. Please see the details section.
     #' @param cumulative whether the data is cumulative
     #' @param mapping a named list specifying the mapping from data columns
+    #' @param CI a boolean indicating whether to calculate the CI using likelihood profiling
     #' @details 
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
-    initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character()) {
+    initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character(), CI=TRUE) {
       if (!require(bbmle))
         stop("bbmle package is required for MLE calibration")
       if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
@@ -119,6 +123,7 @@ MLE <- R6Class(
       private$.likelihood = likelihood
       l = formals(likelihood$log.likelihood)
       if (length(l) >= 3) private$.par.likelihood = names(l[3:length(l)])
+      private$.CI = CI
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     }
   ),
@@ -127,6 +132,11 @@ MLE <- R6Class(
     #' @field parameters the names of all parameters
     parameters = function() {
       c(private$.model$parameters, private$.likelihood$par)
+    },
+    
+    #' field CI whether to calculate the CI using likelihood profiling
+    CI = function() {
+      private$.CI
     }
   )
 )
