@@ -26,7 +26,6 @@ Collate:
   CGillespie.R
   flowchart.R
   Calibrator.R
-  Optimizer.R
   LeastSquare.R
   Distribution.R
   MLE.R
