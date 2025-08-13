@@ -8,6 +8,7 @@
 #' @name Calibrator
 #' @docType class
 #' @export
+
 Calibrator <- R6::R6Class(
   "Calibrator",
   private = list(
@@ -60,7 +61,7 @@ Calibrator <- R6::R6Class(
     ## using this formula
     ## @param fixed the parameter values that are given
     ## @return the fitting results, which will be passed to 
-    ## the intepret method.
+    ## the interpret method.
     .calibrate = function(fit, formula, fixed, ...) {
       NULL
     },
@@ -122,7 +123,7 @@ Calibrator <- R6::R6Class(
   ),
   
   public = list(
-    #' initializer
+    #' @description initializer
     #' @param model the model to calibrate
     #' @param time either a numeric vector containing the times (including the 
     #' initial time) of the ODE solution that corresponds to the data, or a 
