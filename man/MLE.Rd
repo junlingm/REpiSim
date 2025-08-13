@@ -9,8 +9,8 @@ A maximum likelihood calibrator using the bbmle package
 
 A maximum likelihood calibrator using the bbmle package
 }
-\section{Super classes}{
-\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{\link[REpiSim:Optimizer]{REpiSim::Optimizer}} -> \code{MLE}
+\section{Super class}{
+\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{MLE}
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}

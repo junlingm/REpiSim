@@ -9,8 +9,8 @@ The calibrator using the least square method.
 
 The calibrator using the least square method.
 }
-\section{Super classes}{
-\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{\link[REpiSim:Optimizer]{REpiSim::Optimizer}} -> \code{LeastSquare}
+\section{Super class}{
+\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{LeastSquare}
 }
 \section{Methods}{
 \subsection{Public methods}{

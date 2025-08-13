@@ -84,7 +84,7 @@ Calibrate the model to data
 \if{latex}{\out{\hypertarget{method-Calibrator-calibrate}{}}}
 \subsection{Method \code{calibrate()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Calibrator$calibrate(initial.values, parms, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Calibrator$calibrate(initial.values, parms, guess, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -97,6 +97,8 @@ estimated must contain a finite value.}
 \item{\code{parms}}{the parameter values of the model. The parameters 
 that need to be estimate should be NA, those that do not need to be
 estimated must contain a finite value.}
+
+\item{\code{guess}}{the initial guess of the parameters to be fitted}
 
 \item{\code{...}}{extra arguments to be passed to calibrators}
 }
