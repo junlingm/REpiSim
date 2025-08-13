@@ -10,6 +10,10 @@ LeastSquare <- R6::R6Class(
     # whether to fit in log scale
     .log = FALSE,
 
+    simulator = function(model) {
+      ODE$new(model)
+    },
+    
     objective = function(pars, formula, fixed, ...) {
       x = private$simulate(pars, formula, fixed, ...)
       if (private$.log) x = log(x)
@@ -20,7 +24,7 @@ LeastSquare <- R6::R6Class(
       } else sum((x-private$.data)^2)
     },
     
-    optimizer = function(guess, formula, fixed, control=NULL, ...) {
+    .calibrate = function(guess, formula, fixed, control=NULL, ...) {
       args = list(...)
       if (!is.null(control) && args$method == "Nelder-Mead") {
         control$trace = 1

@@ -56,13 +56,13 @@ Calibrator <- R6::R6Class(
     
     ## The actual calibration is done in this function.
     ## This method Must be implemented by subclasses.
-    ## @param fit the parameter values that should be fitted
+    ## @param guess the initial guess for the parameters to be fitted
     ## @param formula gives the parameter values that should be calculated
     ## using this formula
     ## @param fixed the parameter values that are given
     ## @return the fitting results, which will be passed to 
     ## the interpret method.
-    .calibrate = function(fit, formula, fixed, ...) {
+    .calibrate = function(guess, formula, fixed, ...) {
       NULL
     },
     
@@ -96,7 +96,7 @@ Calibrator <- R6::R6Class(
     # and those that are fixed.
     # this function returns a list with names formula, fit and fixed
     # to be fitted, in addition to the remaining parameters in ...
-    fit.info = function(initial.values, parms, ...) {
+    fit.info = function(initial.values, parms, guess, ...) {
       ic = private$split(initial.values, mode="initial.value")
       p = private$split(parms, mode="parameter")
       formula = c(ic$formula, p$formula)
@@ -110,10 +110,27 @@ Calibrator <- R6::R6Class(
       fit = c(extra, ic$fit, p$fit)
       if (length(fit) == 0)
         stop("no initial values or parameters to fit")
+      if (!is.numeric(guess) || any(is.na(guess)))
+        stop("invalid initial values")
+      ng = names(guess)
+      if (is.null(ng) || any(ng == ""))
+        stop("guess must be a named list")
+      extra = setdiff(ng, fit)
+      if (length(extra) == 1) {
+        stop("guess contains extra parameter: ", extra)
+      } else if (length(extra) > 1) {
+        stop("guess contains extra parameters: ", paste(extra, collapse=", "))
+      }
+      missed = setdiff(fit, ng)
+      if (length(missed) == 1) {
+        stop("guess is missing parameter: ", missed)
+      } else if (length(missed) > 1) {
+        stop("guess is missing parameters: ", paste(missed, collapse=", "))
+      }
       fixed = c(ic$value, p$value)
       c(
         list(
-          fit = fit,
+          guess = guess,
           formula = formula,
           fixed = fixed
         ),
@@ -203,9 +220,10 @@ Calibrator <- R6::R6Class(
     #' @param parms the parameter values of the model. The parameters 
     #' that need to be estimate should be NA, those that do not need to be
     #' estimated must contain a finite value.
+    #' @param guess the initial guess of the parameters to be fitted
     #' @param ... extra arguments to be passed to calibrators
-    calibrate = function(initial.values, parms, ...) {
-      info = private$fit.info(initial.values, parms, ...)
+    calibrate = function(initial.values, parms, guess, ...) {
+      info = private$fit.info(initial.values, parms, guess, ...)
       private$.details = do.call(private$.calibrate, info)
       private$interpret(private$.details)
     }

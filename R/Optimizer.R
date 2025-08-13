@@ -35,26 +35,12 @@ Optimizer <- R6::R6Class(
     
     ## The actual calibration is done in this function.
     ## This method Must be implemented by subclasses.
-    ## @param fit the parameter values that should be fitted
+    ## @param guess the initial guess of the parameters to be fitted
     ## @param formula gives the parameter values that should be calculated using this formula
     ## @param fixed the parameter values that are given
-    ## @param guess the initial guess of the parameters to be fitted
     ## @return the fitting results, which will be passed to 
     ## the intepret method.
-    .calibrate = function(fit, formula, fixed, guess, ...) {
-      if (!is.numeric(guess) || any(is.na(guess)))
-        stop("invalid initial values")
-      ng = names(guess)
-      if (is.null(ng) || any(ng=="")) 
-        stop("initial guesses must be named")
-      extra = setdiff(ng, fit)
-      if (length(extra) > 0)
-        stop("variable", if(length(extra)==1) "" else "s", 
-             " not defined in model: ", paste(extra, collapse=", "))
-      miss = setdiff(fit, ng)
-      if (length(miss) > 0)
-        stop("missing initial guess", if(length(miss)==1) "" else "es", ": ", 
-             paste(miss, collapse=", "))
+    .calibrate = function(guess, formula, fixed, ...) {
       private$optimizer(guess, formula, fixed, ...)
     }
   )

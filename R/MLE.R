@@ -4,7 +4,7 @@
 #' @export
 MLE <- R6Class(
   "MLE",
-  inherit = Optimizer,
+  inherit = Calibrator,
   
   private = list(
     .likelihood = NULL,
@@ -31,7 +31,11 @@ MLE <- R6Class(
       )
     },
     
-    optimizer = function(guess, formula, fixed, ...) {
+    simulator = function(model) {
+      ODE$new(model)
+    },
+    
+    .calibrate = function(guess, formula, fixed, ...) {
       args = names(guess)
       arglist = list(as.name("c"))
       for (arg in args) arglist[[arg]] = as.name(arg)
