@@ -50,7 +50,7 @@ RGillespie = R6Class(
         call("<-", quote(.total), call("[[", quote(.sum), length(model$transitions))),
         quote(if (!is.finite(.total) || .total == 0) return(c(Inf, y))),
         quote(.transition <- which(.sum >= runif(1) * .total)[[1]]),
-        quote(t <- t + rexp(1, .total)),
+        call("<-", as.name(model$t), call("+", as.name(model$t), quote(rexp(1, .total)))),
         as.call(c(
           quote(switch),
           quote(.transition),
@@ -71,9 +71,11 @@ RGillespie = R6Class(
             as.call(c(as.name("{"), l))
           })
         ))),
-        quote(c(t, y))
+        call("c", as.name(model$t), as.name("y"))
       )
-      as.function(c(alist(t=, y=, parms=), as.call(l)))
+      args = alist(,,)
+      names(args) <- c(model$t, "y", "parms")
+      as.function(c(args, as.call(l)))
     },
     
     # run the simulation
