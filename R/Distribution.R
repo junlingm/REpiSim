@@ -47,8 +47,8 @@ Distribution <- R6Class(
             extra = c(extra, e$parms)
             par[[n]] = as.name(n)
           } else if (is.name(v)) {
-            extra = c(extra, v)
-            par[[n]] = as.name(n)
+            extra = c(extra, as.character(v))
+            par[[n]] = v
           } else if (is.na(v)) {
             if (n != "mean") call.args[[n]] = NA
             par[[n]] = as.name(n)
