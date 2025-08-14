@@ -15,8 +15,9 @@ A maximum likelihood calibrator using the bbmle package
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{parameters}}{the names of all parameters
-field CI whether to calculate the CI using likelihood profiling}
+\item{\code{parameters}}{the names of all parameters}
+
+\item{\code{CI}}{whether to calculate the CI using likelihood profiling}
 }
 \if{html}{\out{</div>}}
 }

@@ -134,7 +134,7 @@ MLE <- R6Class(
       c(private$.model$parameters, private$.likelihood$par)
     },
     
-    #' field CI whether to calculate the CI using likelihood profiling
+    #' @field CI whether to calculate the CI using likelihood profiling
     CI = function() {
       private$.CI
     }
