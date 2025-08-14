@@ -283,6 +283,7 @@ Expression <- R6::R6Class(
 #' @details
 #' An expression may need the value of other expressions to be evaluated.
 order = function(exprs) {
+  if (length(exprs) == 0) return(NULL)
   # put expr in the order
   build <- function(order, name) {
     if (name %in% order) return(order)
