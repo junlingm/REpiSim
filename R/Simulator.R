@@ -19,7 +19,7 @@ default.functions = c(
 )
 
 ## a list of functions that are can be used in the models
-attached.functions = NULL
+attached.functions = new.env()
 
 #' attach a function to be used by the models.
 #' @param functions a named list of functions, where the name are the functions used
@@ -38,7 +38,7 @@ attach.function <- function(..., functions=NULL) {
   if (!all(check))
     stop(paste(ns[!check], collapse=", "), "must be functions")
   for (n in ns)
-    attached.functions[[n]] <<- fs[[n]]
+    attached.functions[[n]] <- fs[[n]]
 }
 
 #' A R6 class that is the super class for all numerical simulators
