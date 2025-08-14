@@ -26,6 +26,8 @@ attached.functions = NULL
 #' in models
 #' @param ... named arguments, each specifies a function
 #' @details a NULL value removes a function from the list of attached functions.
+#' @export
+#' 
 attach.function <- function(..., functions=NULL) {
   # the ... must be named functions
   fs = c(list(...), functions)
