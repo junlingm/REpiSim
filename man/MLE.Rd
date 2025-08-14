@@ -15,7 +15,8 @@ A maximum likelihood calibrator using the bbmle package
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{parameters}}{the names of all parameters}
+\item{\code{parameters}}{the names of all parameters
+field CI whether to calculate the CI using likelihood profiling}
 }
 \if{html}{\out{</div>}}
 }
@@ -46,7 +47,8 @@ initializer
   likelihood,
   ...,
   cumulative = FALSE,
-  mapping = character()
+  mapping = character(),
+  CI = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -70,6 +72,8 @@ the data columns and the model variables. Please see the details section.}
 \item{\code{cumulative}}{whether the data is cumulative}
 
 \item{\code{mapping}}{a named list specifying the mapping from data columns}
+
+\item{\code{CI}}{a boolean indicating whether to calculate the CI using likelihood profiling}
 }
 \if{html}{\out{</div>}}
 }

@@ -13,8 +13,8 @@ Depends:
 Imports:
   tools
 Suggests:
-  deSolve
-  cpp11
+  deSolve,
+  cpp11,
   bbmle
 Collate:
   Expression.R
