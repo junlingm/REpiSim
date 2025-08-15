@@ -77,6 +77,7 @@ Calibrator <- R6::R6Class(
       } else if (mode == "parameter") {
         set = private$.model$parameters
       } else stop("invalid mode: ", mode)
+      if (length(x) == 0) return(list(value=NULL, formula=NULL, fit=set))
       ns = names(x)
       if (is.null(ns) || any(ns == ""))
         stop(mode, "must be named")
