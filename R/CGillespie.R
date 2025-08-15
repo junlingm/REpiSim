@@ -55,6 +55,18 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
   }
   return data;
 }",
+    
+    # the set up code to transfer the R attached.functions environment to C++
+    setup = "
+cpp11::environment attached_functions(R_NilValue);
+
+[[cpp11::register]]
+void REpiSimSetup(cpp11::environment functions)
+{
+  attached_functions = functions;
+}
+",
+    
     # the C++ code for copying the initial states to the results
     result = list(
       "cpp11::writable::doubles __result(__y.size() + 1);",
@@ -67,7 +79,6 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       "  __result[0] = R_PosInf;",
       "  return __result;",
       "}",
-      "__result[0] = t + exp_rand()/__total;",
       "double __p = unif_rand() * __total;",
       "size_t __transition = 0;",
       "for (; __rate[__transition] <= __p; ++ __transition);"
@@ -100,9 +111,9 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
           `(` = paste0("(", private$cpp(C[[2]]), ")"),
           `[` = if (length(C) > 3) private$cpp(C[-1]) else
             paste0(private$cpp(C[[2]]), "[", private$cpp(C[[3]]), "]"),
-          paste0(private$cpp(C[[1]]), "(", 
-                 do.call(paste, c(lapply(C[-1], self$format), sep=", ")),
-                 ")")
+          paste0("cpp11::as_cpp<double>(", private$cpp(C[[1]]), "(", 
+                 do.call(paste, c(lapply(C[-1], private$cpp), sep=", ")),
+                 "))")
         )
       } else as.character(C)
     },
@@ -200,17 +211,33 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       private$format.switch("__transition", unname(l), indent = "  ")
     },
     
+    # declare attached functions
+    attach.functions = function() {
+      fnames = ls(attached.functions)
+      if (length(fnames) == 0) return(NULL)
+      c(
+        lapply(fnames, function(n) {
+          f = attached.functions[[n]]
+          if (is.null(f))
+            stop("function ", n, " not attached.")
+          paste0("cpp11::function ", n, '(attached_functions["', n, '"]);')
+        })
+      )
+    },
+    
     # build the C++ program for simulating a single event
     build = function(model) {
       l = c(
         private$format.substitution(),
+        private$attach.functions(),
         private$result,
         private$format.rate(model$transitions),
         private$middle,
+        private$assign("__result[0]",paste0(model$t, " + exp_rand()/__total")),
         private$format.transition(model$transitions),
         "return(__result);"
       )
-      paste0("inline cpp11::doubles step(double t, cpp11::doubles __y, cpp11::doubles __parms) ",
+      paste0("inline cpp11::doubles step(double ", model$t, ", cpp11::doubles __y, cpp11::doubles __parms) ",
              private$block(l, ""))
     },
     
@@ -270,6 +297,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       super$initialize(model)
       private$.program = paste(
         private$header,
+        private$setup,
         self$model,
         private$main,
         sep = "\n"
@@ -277,6 +305,7 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       private$lib = cpp_source(
         code = private$.program)
       private$gillespie = gillespie
+      REpiSimSetup(attached.functions)
     }
-  ),
+  )
 )
