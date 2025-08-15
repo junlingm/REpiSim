@@ -53,7 +53,7 @@
 ## the builtin functions that are not reported in Model$functions
 builtin.functions = c(
   "+", "-", "*", "/", "^", "==", ">", "<", ">=", "<=", "!=",
-  "&&", "||", "&", "|", "!", "[", "[[", "ifelse"
+  "&&", "||", "&", "|", "!", "[", "[[", "ifelse", "("
 )
 
 # An R6 class to extract names and functions from an expression
