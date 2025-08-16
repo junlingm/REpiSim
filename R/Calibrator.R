@@ -210,7 +210,9 @@ Calibrator <- R6::R6Class(
       }
       private$.model = m
       private$.simulator = private$simulator(m)
-      private$.data = data[, names(private$.mapping)]
+      data = data[, names(private$.mapping)]
+      if (!is.null(ncol(data)) && ncol(data) == 1) data = data[[1]]
+      private$.data = data
     },
     
     #' Calibrate the model to data
