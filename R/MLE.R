@@ -23,7 +23,7 @@ MLE <- R6Class(
         -sum(sapply(1:ncol(x), function(i) {
           do.call(
             private$.likelihood$log.likelihood, 
-            c(list(private$.data[,i], x[,i], pars.l))
+            c(list(private$.data[,i], x[,i]), pars.l)
           )
         }))
       } else -do.call(
