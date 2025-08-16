@@ -146,10 +146,7 @@ Simulator = R6Class(
           attr(private$alias[[n]], "compartment") = TRUE
       }
       private$.model = private$build(model)
-      e = new.env()
-      for (f in names(model$attached.functions))
-        e[[f]] = model$attached.functions[[f]]
-      environment(private$.model) = e
+      environment(private$.model) = attached.functions
       col = list(quote(c), quote(row))
       for (n in names(private$alias)) {
         if (!is.null(attr(private$alias[[n]], "compartment")))
