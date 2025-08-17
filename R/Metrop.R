@@ -12,6 +12,10 @@ Metrop <- R6::R6Class(
     objective = function(pars, formula, fixed, priors, ...) {
       names(pars) = names(priors)
       all = c(as.list(pars), fixed)
+      lp = sum(sapply(names(priors), function(n) priors[[n]]$log.density(all[[n]]) ))
+      if (is.infinite(lp) || is.nan(lp)) {
+        return(-Inf)
+      }
       for (n in names(formula)) {
         f = formula[[n]]
         all[[n]] = eval(f$expr, envir = all)
@@ -29,7 +33,7 @@ Metrop <- R6::R6Class(
         private$.likelihood$log.likelihood,
         c(list(private$.data, x), pars.l)
       )
-      ll + sum(sapply(names(priors), function(n) priors[[n]]$log.density(all[[n]]) ))
+      ll + lp
     },
     
     .calibrate = function(guess, formula, fixed, priors, ...) {
