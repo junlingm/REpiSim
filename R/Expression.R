@@ -56,7 +56,11 @@ builtin.functions = c(
   "&&", "||", "&", "|", "!", "[", "[[", "ifelse", "("
 )
 
-# An R6 class to extract names and functions from an expression
+#' An R6 class to extract names and functions from an expression
+#' @docType class
+#' @export
+#' 
+
 Expression <- R6::R6Class(
   "Expression",
   
@@ -104,7 +108,7 @@ Expression <- R6::R6Class(
   ),
   
   public = list(
-    #' constructor
+    #' @description constructor
     #' 
     #' @param expr the expression to parse
     initialize = function(expr) {
