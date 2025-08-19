@@ -53,7 +53,10 @@ MLE <- R6Class(
       e$formula = formula
       e$private = private
       environment(neglogL)=e
-      mle2(neglogL, as.list(guess), ...)
+      caller = list(...)
+      if (is.null(caller$skip.hessian))
+        caller$skip.hessian=!private$.CI
+      do.call(mle2, c(list(neglogL, start=as.list(guess)), caller))
     },
     
     interpret = function(result) {
