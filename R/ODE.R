@@ -14,18 +14,25 @@ ODE = R6Class(
       v = list()
       system = model$equations
       der = lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
+      alias = names(private$alias)
+      extra = lapply(alias, as.name)
+      names(extra) = alias
       l = c(
         as.name("{"),
         private$format.substitution(),
         lapply(system$equations, private$format.equation),
-        call("list", as.call(c(list(as.name("c")), der)))
+        call(
+          "list", 
+          as.call(c(list(as.name("c")), der)), # the derivatives
+          as.call(c(list(as.name("c")), extra)) # the substitutions
+        )
       )
       args = alist(,,)
       names(args) <- c(model$t, "y", "parms")
       as.function(c(args, as.call(l)))
     },
     
-    run = function(t, y0, parms, ...) {
+    .simulate = function(t, y0, parms, ...) {
       as.data.frame(ode(y0, t, self$model, parms, ...))
     }
   ),
@@ -101,7 +108,7 @@ Equilibrium = R6Class(
       as.data.frame(as.list(y0))
     },
     
-    run = function(time, y0, parms, ...) {
+    .simulate = function(time, y0, parms, ...) {
       data = data.frame()
       if (is.null(private$vary)) {
         data = rbind(data, private$eq(time, y0, parms))
