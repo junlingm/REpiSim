@@ -57,11 +57,7 @@ Simulator = R6Class(
     parameters = NULL,
     # model substitutions
     alias = NULL,
-    # attached functions
-    attached.functions = NULL,
-    # a function call to calculate alias
-    f.alias = NULL,
-    
+
     # a private method that builds the code to simulate the
     # model. It should be implemented by all subclasses.
     # Parameter: model the model to simulate. 
@@ -100,18 +96,12 @@ Simulator = R6Class(
       )
     },
     
-    # This private method actually performs the simulation
-    run = function(t, y0, parms, ...) {
-      NULL
-    },
-    
     # run the simulation, and if requested (alias=TRUE), then calculate
     # the substitutions that depend on compartments and append them
-    # to the data frame returned from `run`.
+    # to the data frame returned from `run`. 
+    # This method should be implemented by all subclasses.
     .simulate = function(t, y0, parms, alias, ...) {
-      data = private$run(t, y0[private$compartments], parms[private$parameters], ...)
-      d = if (!alias) data else
-        as.data.frame(t(apply(data, 1, private$f.alias, parms=parms)))
+      NULL
     }
   ),
   
@@ -147,17 +137,6 @@ Simulator = R6Class(
       }
       private$.model = private$build(model)
       environment(private$.model) = attached.functions
-      col = list(quote(c), quote(row))
-      for (n in names(private$alias)) {
-        if (!is.null(attr(private$alias[[n]], "compartment")))
-          col[[n]] = as.name(n)
-      }
-      body = call(
-        "with", 
-        quote(c(as.list(parms), as.list(row))),
-        as.call(c(as.name("{"), lapply(private$alias, as.call), as.call(col)))
-      )
-      private$f.alias = as.function(c(alist(row=, parms=), body))
     },
     
     #' @description simulate the model
@@ -192,8 +171,7 @@ Simulator = R6Class(
       extra = setdiff(private$parameters, np)
       if (length(extra) > 0)
         stop("extra parameter values for ", extra)
-      alias = any(vars %in% names(private$alias))
-      data = private$.simulate(t, y0, parms, alias, ...)
+      data = private$.simulate(t, y0[private$compartments], parms[private$parameters], ...)
       if (colnames(data)[[1]] == "time")
         vars = c("time", vars)
       data[, vars]
