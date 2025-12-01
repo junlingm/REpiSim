@@ -249,7 +249,7 @@ void REpiSimSetup(cpp11::environment functions)
     },
     
     # perform the simulation.
-    run = function(t, y, parms) {
+    .simulate = function(t, y, parms) {
       mistype = which(is.na(y) | y != as.integer(y) | y < 0)
       if (length(mistype) != 0) {
         if (length(mistype) > 1) {
