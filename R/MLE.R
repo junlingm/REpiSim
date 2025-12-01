@@ -10,6 +10,7 @@ MLE <- R6Class(
     .likelihood = NULL,
     .par.likelihood = NULL,
     .CI = TRUE,
+    .last = NULL, # th e last fit result
     
     objective = function(pars, formula, fixed, ...) {
       all = c(as.list(pars), fixed)
@@ -56,7 +57,13 @@ MLE <- R6Class(
       caller = list(...)
       if (is.null(caller$skip.hessian))
         caller$skip.hessian=!private$.CI
-      do.call(mle2, c(list(neglogL, start=as.list(guess)), caller))
+      res = do.call(mle2, c(list(neglogL, start=as.list(guess)), caller))
+      if (res@details$convergence == 10 && (is.null(private$.last) || any(coef(res)!=private$.last))) {
+        private$.last <- coef(res)
+        cat("The likelihood profiling did not converge. continue...\n")
+        print(coef(res))
+        private$.calibrate(coef(res), formula, fixed, ...)
+      } else res
     },
     
     interpret = function(result) {
@@ -74,7 +81,12 @@ MLE <- R6Class(
           }
         } else ci = NULL
         as.data.frame(cbind(mean=coef(result), ci))
-      } else stop("Error (", details$convergence, "): ", details$message)
+      } else {
+        .last.fit <<- result
+        cat("stopped at\n")
+        print(coef(result))
+        stop("Error (", details$convergence, "): ", details$message)
+      }
     },
     
     fit.info = function(initial.values, parms, ...) {
