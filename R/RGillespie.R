@@ -37,6 +37,9 @@ RGillespie = R6Class(
     
     # return the R code for simulating the model for a single time step (one event)
     build = function(model) {
+      alias = names(private$alias)
+      extra = lapply(alias, as.name)
+      names(extra) = alias
       l = c(
         as.name("{"),
         private$format.var(model$compartments, "y"),
@@ -71,7 +74,7 @@ RGillespie = R6Class(
             as.call(c(as.name("{"), l))
           })
         ))),
-        call("c", as.name(model$t), as.name("y"))
+        as.call(c(list(as.name("c"), as.name(model$t), as.name("y")), extra))
       )
       args = alist(,,)
       names(args) <- c(model$t, "y", "parms")
@@ -79,7 +82,7 @@ RGillespie = R6Class(
     },
     
     # run the simulation
-    run = function(t, y, parms) {
+    .simulate = function(t, y, parms) {
       mistype = which(is.na(y) | y != as.integer(y) | y < 0)
       if (length(mistype) != 0) {
         if (length(mistype) > 1) {
