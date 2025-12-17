@@ -60,7 +60,7 @@ default.functions <- c(
 ##
 ## We set parent = baseenv() so base functions remain visible during evaluation
 ## of generated model code, even if we set a function's environment to this env.
-attached.functions <- new.env(parent = baseenv())
+attached.functions <- new.env(parent = asNamespace("stats"))
 
 #' Attach functions to be used by models
 #'
