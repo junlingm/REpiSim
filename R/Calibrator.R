@@ -1,134 +1,201 @@
+# ==============================================================================
+# Calibration infrastructure
+# ==============================================================================
+#
+# This file defines the abstract Calibrator class.
+#
+# A calibrator fits a model to a dataset. Conceptually it needs:
+#   - a model (Model / Compartmental)
+#   - a simulator backend (chosen by subclasses)
+#   - a dataset with observation columns
+#   - a mapping from observation columns -> model variables or expressions
+#   - a split of unknowns into:
+#       * fixed values (provided)
+#       * formula-defined values (computed from other values)
+#       * fitted values (estimated by the calibrator)
+#
+# Subclasses must implement:
+#   - private$simulator(model): construct a Simulator instance
+#   - private$.calibrate(guess, formula, fixed, ...): perform optimization/inference
+#   - private$interpret(results): convert algorithm output into user-facing form
+# ==============================================================================
+
 #' The base R6 class for calibrators
-#' 
-#' @details A calibrator calibrates the model to a dataset. Like a simulator, 
-#' to calibrate the model to a dataset, a calibrator
-#' expects the known and unknown initial conditions and the parameter values, 
-#' and the data to calibrate to. In addition, it also expects a mapping from 
-#' model solutions to observation variables.
+#'
+#' @details
+#' A calibrator fits a model to a dataset. Like a simulator, calibration requires:
+#' - initial conditions (some fixed, some unknown),
+#' - parameter values (some fixed, some unknown),
+#' - data to fit,
+#' - a mapping from model variables to observation variables.
+#'
+#' Subclasses implement the actual fitting algorithm in `private$.calibrate()`.
+#'
 #' @name Calibrator
 #' @docType class
 #' @export
-
 Calibrator <- R6::R6Class(
   "Calibrator",
+  
   private = list(
-    # the simulator to simulator the model udrign calibration
+    # Simulator used during calibration (subclass-specific, e.g., ODE)
     .simulator = NULL,
-    # the data frame to be fitted to
+    
+    # Data used for fitting (numeric vector or data.frame, depending on mapping)
     .data = NULL,
-    # the model fitted to data
+    
+    # A cloned model used for calibration (may include extra observation aliases)
     .model = NULL,
-    # whether the solutions of the model to be matched to data is cumulative
+    
+    # Whether the observed quantity is cumulative (difference is taken)
     .cumulative = FALSE,
-    # the mapping from model variables to data
+    
+    # Named character vector: observation column -> model variable name
     .mapping = NULL,
-    # the time for simulation
+    
+    # Simulation time vector corresponding to the data
     .time = NULL,
-    # the return value from the underlying algorithm
+    
+    # Raw output from the underlying calibration algorithm
     .details = NULL,
     
-    ## create a simulator needed for calibration. Must be implemented by subclasses.
-    simulator = function(model) {
-      NULL
-    },
+    # ------------------------------------------------------------------------
+    # Hooks for subclasses
+    # ------------------------------------------------------------------------
     
-    ## the function that simulates the model given the fit info.
+    #' Construct a simulator for calibration (must be implemented by subclasses)
+    simulator = function(model) NULL,
+    
+    #' Interpret the algorithm output into a user-facing result
+    interpret = function(results) NULL,
+    
+    #' The actual calibration routine (must be implemented by subclasses)
+    .calibrate = function(guess, formula, fixed, ...) NULL,
+    
+    # ------------------------------------------------------------------------
+    # Core helpers
+    # ------------------------------------------------------------------------
+    
+    # Simulate the model given:
+    #   pars   - named numeric vector of fitted values (subset of unknowns)
+    #   formula- named list of Expression objects (computed values)
+    #   fixed  - named list of fixed values
+    #
+    # Returns a matrix/data.frame aligned with the data being fitted.
     simulate = function(pars, formula, fixed, ...) {
-      # evaluate values given by the formula
-      all = c(as.list(pars), fixed)
+      # Combine fitted and fixed into one mutable "value table".
+      all <- c(as.list(pars), fixed)
+      
+      # Evaluate formula-defined values (dependency order assumed).
       for (n in names(formula)) {
-        f = formula[[n]]
-        all[[n]] = eval(f$expr, envir = all)
+        f <- formula[[n]]
+        all[[n]] <- eval(f$expr, envir = all)
       }
-      ic = unlist(all[private$.model$compartments])
-      par = all[private$.model$parameters]
-      data = private$.simulator$simulate(private$.time, ic, par, vars=unlist(private$.mapping), ...)
+      
+      # Extract initial conditions and parameters
+      ic <- unlist(all[private$.model$compartments])
+      par <- all[private$.model$parameters]
+      
+      # Simulate only the variables needed by the mapping (plus time)
+      vars <- unlist(private$.mapping)
+      sim <- private$.simulator$simulate(private$.time, ic, par, vars = vars, ...)
+      
+      # If cumulative observations were provided, convert cumulative model outputs
+      # to per-interval increments by differencing.
       if (private$.cumulative) {
-        if (ncol(data) == 2) diff(data[,2]) else
-          as.data.frame(lapply(data[, -1], diff))
-      } else data[,-1]
+        if (ncol(sim) == 2) {
+          # single series: time + one variable
+          return(diff(sim[[2]]))
+        }
+        return(as.data.frame(lapply(sim[, -1, drop = FALSE], diff)))
+      }
+      
+      # Drop time column for fitting
+      sim[, -1, drop = FALSE]
     },
     
-    ## interpret the results of calibration
-    interpret = function(results) {
-      NULL
-    },
-    
-    ## The actual calibration is done in this function.
-    ## This method Must be implemented by subclasses.
-    ## @param guess the initial guess for the parameters to be fitted
-    ## @param formula gives the parameter values that should be calculated
-    ## using this formula
-    ## @param fixed the parameter values that are given
-    ## @return the fitting results, which will be passed to 
-    ## the interpret method.
-    .calibrate = function(guess, formula, fixed, ...) {
-      NULL
-    },
-    
-    # split the parameters or initial conditions by type
-    # here x is the list or vector of parameters or initial conditions,
-    # mode specifies what values to split. If x does not 
-    # contain a named value, it will be fitted
-    split = function(x, mode=c("initial.value", "parameter")) {
-      mode = match.arg(mode, c("initial.value", "parameter"))
-      if (mode == "initial.value") {
-        set = private$.model$compartments
-      } else if (mode == "parameter") {
-        set = private$.model$parameters
-      } else stop("invalid mode: ", mode)
-      if (length(x) == 0) return(list(value=NULL, formula=NULL, fit=set))
-      ns = names(x)
+    # Split a named vector/list into: fixed numeric values, formula-defined values,
+    # and variables-to-fit (those not specified).
+    #
+    # For `mode="initial.value"`, the set is model compartments.
+    # For `mode="parameter"`, the set is model parameters.
+    split = function(x, mode = c("initial.value", "parameter")) {
+      mode <- match.arg(mode)
+      
+      set <- if (mode == "initial.value") {
+        private$.model$compartments
+      } else {
+        private$.model$parameters
+      }
+      
+      if (length(x) == 0) {
+        return(list(value = NULL, formula = NULL, fit = set))
+      }
+      
+      ns <- names(x)
       if (is.null(ns) || any(ns == ""))
-        stop(mode, "must be named")
-      extra = setdiff(ns, set)
+        stop(mode, " must be named")
+      
+      extra <- setdiff(ns, set)
       if (length(extra) > 0)
         stop(paste(extra, collapse = ", "), " not defined in the model")
-      idx.values = sapply(x, is.numeric)
-      idx.formula = sapply(x, function(y) is(y, "Expression"))
-      x.values = as.list(x[idx.values])
-      x.formula = x[idx.formula]
-      x.fit = setdiff(set, ns[idx.values | idx.formula])
+      
+      idx.values <- vapply(x, is.numeric, logical(1))
+      idx.formula <- vapply(x, function(y) is(y, "Expression"), logical(1))
+      
+      x.values <- as.list(x[idx.values])
+      x.formula <- x[idx.formula]
+      x.fit <- setdiff(set, ns[idx.values | idx.formula])
+      
       list(value = x.values, formula = x.formula, fit = x.fit)
     },
     
-    # the calibrate method uses this function to infer the parameters that 
-    # needs to be fitted, those that need to be calculated from a formula, 
-    # and those that are fixed.
-    # this function returns a list with names formula, fit and fixed
-    # to be fitted, in addition to the remaining parameters in ...
+    # Infer what to fit, what to compute from formula, and what is fixed.
+    #
+    # Returns a list suitable for do.call(private$.calibrate, ...):
+    #   list(guess=..., formula=..., fixed=..., <extra args>)
     fit.info = function(initial.values, parms, guess, ...) {
-      ic = private$split(initial.values, mode="initial.value")
-      p = private$split(parms, mode="parameter")
-      formula = c(ic$formula, p$formula)
-      if (length(formula) > 0) formula = formula[order(formula)]
-      # find all parameters from the formula
-      parms = Reduce(
-        function(extra, f) union(f$parms, extra), 
-        formula, 
-        init=character())
-      extra = setdiff(parms, c(private$.model$compartments, private$.model$parameters))
-      fit = c(extra, ic$fit, p$fit)
+      ic <- private$split(initial.values, mode = "initial.value")
+      p <- private$split(parms, mode = "parameter")
+      
+      formula <- c(ic$formula, p$formula)
+      
+      # Formula objects are Expression instances; the package provides an `order()`
+      # helper that orders by dependence.
+      if (length(formula) > 0) formula <- formula[order(formula)]
+      
+      # Collect additional symbols referenced by formulas that are neither
+      # compartments nor parameters: these become "extra" fitted values.
+      needed <- Reduce(function(extra, f) union(f$parms, extra), formula, init = character())
+      extra <- setdiff(needed, c(private$.model$compartments, private$.model$parameters))
+      
+      fit <- c(extra, ic$fit, p$fit)
       if (length(fit) == 0)
         stop("no initial values or parameters to fit")
+      
       if (!is.numeric(guess) || any(is.na(guess)))
-        stop("invalid initial values")
-      ng = names(guess)
+        stop("invalid initial guess values")
+      
+      ng <- names(guess)
       if (is.null(ng) || any(ng == ""))
-        stop("guess must be a named list")
-      extra = setdiff(ng, fit)
-      if (length(extra) == 1) {
-        stop("guess contains extra parameter: ", extra)
-      } else if (length(extra) > 1) {
-        stop("guess contains extra parameters: ", paste(extra, collapse=", "))
+        stop("guess must be a named numeric vector")
+      
+      extra_guess <- setdiff(ng, fit)
+      if (length(extra_guess) == 1) {
+        stop("guess contains extra parameter: ", extra_guess)
+      } else if (length(extra_guess) > 1) {
+        stop("guess contains extra parameters: ", paste(extra_guess, collapse = ", "))
       }
-      missed = setdiff(fit, ng)
+      
+      missed <- setdiff(fit, ng)
       if (length(missed) == 1) {
         stop("guess is missing parameter: ", missed)
       } else if (length(missed) > 1) {
-        stop("guess is missing parameters: ", paste(missed, collapse=", "))
+        stop("guess is missing parameters: ", paste(missed, collapse = ", "))
       }
-      fixed = c(ic$value, p$value)
+      
+      fixed <- c(ic$value, p$value)
+      
       c(
         list(
           guess = guess,
@@ -141,106 +208,132 @@ Calibrator <- R6::R6Class(
   ),
   
   public = list(
-    #' @description initializer
-    #' @param model the model to calibrate
-    #' @param time either a numeric vector containing the times (including the 
-    #' initial time) of the ODE solution that corresponds to the data, or a 
-    #' character value giving the name of the column in data that corresponds 
-    #' to time.
-    #' @param data a data.frame object containing the data for the calibration
-    #' @param ... each argument is a formula defining the maps between 
-    #' the data columns and the model variables. Please see the details section.
-    #' @param cumulative whether the data is cumulative
-    #' @param mapping a named list specifying the mapping from data columns
-    #' to quantities in the model.
-    #' @details 
-    #' A mapping is a named argument, where name is the
-    #' data colummn name, and value corresponds to the model variables (or an 
-    #' expression to calculate from the model variables.)
-    initialize = function(model, time, data, ..., cumulative=FALSE, mapping=character()) {
-      m = model$clone(deep=TRUE)
+    #' @description
+    #' Initialize a calibrator.
+    #'
+    #' @param model The model to calibrate.
+    #' @param time Either:
+    #'   - numeric vector of times (including initial time if `cumulative=TRUE`), or
+    #'   - character column name in `data` that contains time.
+    #' @param data A data.frame with observation columns.
+    #' @param ... Optional mapping formulas of the form `data_col ~ model_var_or_expr`.
+    #' @param cumulative Whether the data are cumulative (if TRUE, the model output
+    #'   is differenced before fitting).
+    #' @param mapping Optional named character vector mapping data columns to model
+    #'   variables (alternative to `...` formulas).
+    #'
+    #' @details
+    #' A mapping entry maps a data column name to either:
+    #' - a model compartment/substitution name, or
+    #' - an expression in model variables (in which case a new substitution is
+    #'   created internally).
+    initialize = function(model, time, data, ..., cumulative = FALSE, mapping = character()) {
+      m <- model$clone(deep = TRUE)
+      
       if (!is.data.frame(data))
         stop("data must be a data.frame object")
-      extra = setdiff(names(mapping), colnames(data))
-      if (length(extra) > 0)
-        stop("data column", if(length(extra)==1) "" else "s", 
-             " does not exist: ", paste(extra, collapse=", "))
-      private$.mapping = mapping
-      private$.cumulative = cumulative
+      
+      if (length(mapping) > 0) {
+        extra_cols <- setdiff(names(mapping), colnames(data))
+        if (length(extra_cols) > 0)
+          stop(
+            "data column", if (length(extra_cols) == 1) "" else "s",
+            " does not exist: ", paste(extra_cols, collapse = ", ")
+          )
+      }
+      
+      private$.mapping <- mapping
+      private$.cumulative <- cumulative
+      
+      # Resolve time vector
       if (is.numeric(time)) {
         if (cumulative) {
           if (length(time) - 1 != nrow(data))
-            stop("the time should have one more point than the length of the data, to calculate the difference from teh cumulative curves")
-        } else if (length(time) != nrow(data))
-          stop("time should have the same length as data")
-        private$.time = time
-        l = list()
-        private$.data= do.call(data.frame, l)
-      } else if (!is.character(time) || is.null(data[[time]]))
-        stop("time should be a column name in data indicating which column is time")
-      else if (cumulative)
-        stop("the time should have one more point than the length of the data, to calculate the difference from teh cumulative curves")
-      else private$.time = data[[time]]
-      args = as.list(substitute(list(...))[-1])
+            stop("for cumulative data, time must have one more point than nrow(data)")
+        } else {
+          if (length(time) != nrow(data))
+            stop("time should have the same length as nrow(data)")
+        }
+        private$.time <- time
+      } else if (is.character(time) && !is.null(data[[time]])) {
+        if (cumulative)
+          stop("for cumulative data, provide a numeric time vector with one extra point")
+        private$.time <- data[[time]]
+      } else {
+        stop("time must be either a numeric vector or a column name in `data`")
+      }
+      
+      # Parse mapping formulas in ...
+      args <- as.list(substitute(list(...)))[-1]
       if (length(args) == 0 && length(mapping) == 0)
         stop("no mapping from data to model variables")
+      
       for (a in args) {
-        if (as.character(a[[1]]) != "~")
+        if (!is.call(a) || as.character(a[[1]]) != "~")
           stop("invalid mapping: ", deparse(a))
-        if ((!is.name(a[[2]]) && !is.character(a[[2]])) || is.null(data[[a[[2]]]])) 
+        
+        # LHS: data column
+        if ((!is.name(a[[2]]) && !is.character(a[[2]])) || is.null(data[[as.character(a[[2]])]]))
           stop("not a data column: ", deparse(a[[2]]))
-        col = as.character(a[[2]])
+        col <- as.character(a[[2]])
+        
+        # RHS: model variable name OR expression in model variables
         if (is.name(a[[3]])) {
-          var = as.character(a[[3]])
+          var <- as.character(a[[3]])
           if (!var %in% m$compartments && is.null(m$substitutions[[var]]))
-            stop(var, "is not a model variable")
+            stop(var, " is not a model variable")
         } else {
           if (!is.call(a[[3]]))
             stop(deparse(a[[3]]), " is not a valid specification")
-          var = if (!col %in% m$compartments && is.null(m$substitutions[[col]])) {
+          
+          # If the data column name does not already conflict, reuse it;
+          # otherwise create an internal observation alias.
+          var <- if (!col %in% m$compartments && is.null(m$substitutions[[col]])) {
             col
-          } else paste0(".observation.", col)
-          l = list()
-          l[[var]] = a[[3]]
-          m$where(pairs = l)
+          } else {
+            paste0(".observation.", col)
+          }
+          
+          m$where(pairs = setNames(list(a[[3]]), var))
         }
-        if (!is.na(private$.mapping[col]))
+        
+        if (col %in% names(private$.mapping))
           stop("redefining mapping for data column ", col)
-        private$.mapping[col] = var
+        
+        private$.mapping[col] <- var
       }
-      private$.model = m
-      private$.simulator = private$simulator(m)
-      data = data[, names(private$.mapping)]
-      if (!is.null(ncol(data)) && ncol(data) == 1) data = data[[1]]
-      private$.data = data
+      
+      private$.model <- m
+      private$.simulator <- private$simulator(m)
+      
+      # Keep only the mapped observation columns in the fitting data
+      obs_cols <- names(private$.mapping)
+      fit_data <- data[, obs_cols, drop = FALSE]
+      if (ncol(fit_data) == 1) fit_data <- fit_data[[1]]
+      private$.data <- fit_data
     },
     
     #' Calibrate the model to data
-    #' 
-    #' @param initial.values the initial values for the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param parms the parameter values of the model. The parameters 
-    #' that need to be estimate should be NA, those that do not need to be
-    #' estimated must contain a finite value.
-    #' @param guess the initial guess of the parameters to be fitted
-    #' @param ... extra arguments to be passed to calibrators
+    #'
+    #' @param initial.values Named initial values (compartments). Values may be:
+    #'   - numeric (fixed),
+    #'   - Expression (computed), or
+    #'   - omitted (fit).
+    #' @param parms Named parameter values; same conventions as initial.values.
+    #' @param guess Named numeric vector giving starting values for all fitted quantities.
+    #' @param ... Extra arguments forwarded to the subclass calibrator.
     calibrate = function(initial.values, parms, guess, ...) {
-      info = private$fit.info(initial.values, parms, guess, ...)
-      private$.details = do.call(private$.calibrate, info)
+      info <- private$fit.info(initial.values, parms, guess, ...)
+      private$.details <- do.call(private$.calibrate, info)
       private$interpret(private$.details)
     }
   ),
   
   active = list(
-    #' @field parameters the names of all parameters
-    parameters = function() {
-      private$.model$parameters
-    },
+    #' @field parameters Names of all model parameters
+    parameters = function() private$.model$parameters,
     
-    #' @field details the details of the fitting output
-    details = function() {
-      private$.details
-    }
+    #' @field details Raw output from the underlying calibration algorithm
+    details = function() private$.details
   )
 )
