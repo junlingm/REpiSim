@@ -1,164 +1,217 @@
-#' A R6 class for numerically solving the ODE models
-#' 
-#' ODE is a subclass of `Simulator`. This class is only available if the `deSolve` 
-#' package is installed.
+# ==============================================================================
+# ODE simulator (deSolve backend)
+# ==============================================================================
+#
+# This file defines:
+#   - ODE: a Simulator subclass that compiles a Model into a function compatible
+#          with deSolve::ode().
+#   - Equilibrium: a helper subclass that searches for an equilibrium by
+#          repeated forward simulation ("fixed-point" iteration).
+#
+# Key implementation idea for ODE:
+#   deSolve expects a function with signature:
+#     f(time, state, parameters) -> list(dstate_dt, extra_outputs)
+#
+# We therefore compile:
+#   1) assignments that bind y and parms into named variables
+#   2) assignments for substitution variables (aliases)
+#   3) derivative expressions for each compartment
+#   4) return list(c(dS, dI, ...), c(extra1, extra2, ...))
+#
+# The "extra outputs" allow deSolve to carry any compartment-dependent
+# substitutions along with the solution (so that simulate() can return them
+# without recomputing).
+# ==============================================================================
+
+#' A R6 class for numerically solving ODE models
+#'
+#' `ODE` is a subclass of [Simulator]. This class is available only if the
+#' **deSolve** package is installed.
+#'
 #' @name ODE
 #' @docType class
 #' @export
-ODE = R6Class(
+ODE <- R6Class(
   "ODE",
   inherit = Simulator,
+  
   private = list(
+    # --------------------------------------------------------------------------
+    # Compile model -> deSolve function(time, y, parms)
+    # --------------------------------------------------------------------------
     build = function(model) {
-      l = alist()
-      v = list()
-      system = model$equations
-      der = lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
-      alias = names(private$alias)
-      extra = lapply(alias, as.name)
-      names(extra) = alias
-      l = c(
+      system <- model$equations
+      
+      # Derivative variable names: ".d.S", ".d.I", ...
+      der <- lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
+      
+      # Extra outputs (substitutions): return these from the deSolve function so
+      # they are included in the output data.frame.
+      alias_names <- names(private$alias)
+      extra_syms <- lapply(alias_names, as.name)
+      names(extra_syms) <- alias_names
+      
+      # Function body:
+      # {
+      #   <bind y/parms>
+      #   <compute aliases>
+      #   <compute derivatives>
+      #   list(c(dS, dI, ...), c(extra1, extra2, ...))
+      # }
+      body_calls <- c(
         as.name("{"),
         private$format.substitution(),
         lapply(system$equations, private$format.equation),
         call(
-          "list", 
-          as.call(c(list(as.name("c")), der)), # the derivatives
-          as.call(c(list(as.name("c")), extra)) # the substitutions
+          "list",
+          as.call(c(list(as.name("c")), der)),
+          as.call(c(list(as.name("c")), extra_syms))
         )
       )
-      args = alist(,,)
+      
+      # Build function arguments: (t, y, parms) but with t named as model$t
+      args <- alist(,,)
       names(args) <- c(model$t, "y", "parms")
-      as.function(c(args, as.call(l)))
+      
+      as.function(c(args, as.call(body_calls)))
     },
     
+    # --------------------------------------------------------------------------
+    # Run deSolve
+    # --------------------------------------------------------------------------
     .simulate = function(t, y0, parms, ...) {
-      as.data.frame(ode(y0, t, self$model, parms, ...))
+      as.data.frame(deSolve::ode(y = y0, times = t, func = self$model, parms = parms, ...))
     }
   ),
   
   public = list(
-    #' @description constructor
-    #' @param model the model to simulate. It must be an object of a subclass
-    #' of `Model`.
+    #' @description
+    #' Construct an ODE simulator for a model.
+    #'
+    #' @param model A [Model] (or subclass) to simulate.
     initialize = function(model) {
-      if (!require(deSolve, quietly = TRUE))
-        stop("package deSolve is not installed. The ODE class is not available")
+      if (!requireNamespace("deSolve", quietly = TRUE))
+        stop("package 'deSolve' is not installed; the ODE simulator is unavailable")
       super$initialize(model)
     }
   ),
   
   active = list(
-    #' @field model a read-only field giving the R function for the ODE equations
-    #' to be passed to deSolve::ode as the `func` argument.
+    #' @field model
+    #' A read-only field returning the compiled deSolve function used as `func`.
     model = function() {
       private$.model
     }
   )
 )
 
-#' An R6 class to calculate the equilibrium of a model
-#' 
-#' Calculate the equilibrium of the model with a given initial condition
-#' 
-#' @param model a Model object.
-#' @param max.iter the maximum iterations to search for the equilibrium
-#' @param vary the name of a parameter to value, a character
-#' @param range the range of the varying parameter, a numerical vector
-#' @param error a numeric value giving the 2-norm of the tolerance
-#' @param vars a character vector giving the compartments and substitutions
-#' which equilibrium value should be returned.
-#' @examples 
-#' # an SIR model
-#' SIR = Model$new(title="SIR")
-#' SIR$compartment(S ~ -beta*S*I/N)$
-#'   compartment(I ~ beta*S*I/N - gamma*I)$
-#'   compartment(R ~ gamma*I)$
-#'   where(N = S + I + R)
-#' eq = Equilibrium$new(SIR, vary="beta", range=seq(0, 0.4, by=0.01))
-#' ode$simulate(
-#'   time=0:40, 
-#'   y0=c(S=10000, I=1, R=0), 
-#'   parms=c(beta=0.4, gamma=0.2), 
-#'   alias = FALSE) # N is not returned.
+# ==============================================================================
+# Equilibrium helper
+# ==============================================================================
+
+#' An R6 class to approximate an equilibrium of a model
+#'
+#' This class searches for an equilibrium by repeated forward simulation:
+#' simulate forward, take the final state, use it as the next initial condition,
+#' and stop when the 2-norm difference falls below `error`.
+#'
+#' @param model A [Model] object.
+#' @param max.iter Maximum number of iterations.
+#' @param vary Optional parameter name to vary (character).
+#' @param range Numeric vector of parameter values used when `vary` is not NULL.
+#' @param error Convergence tolerance on the 2-norm.
+#' @param vars Variables (compartments/substitutions) to return.
+#'
 #' @name Equilibrium
 #' @docType class
 #' @export
-Equilibrium = R6Class(
+Equilibrium <- R6Class(
   "Equilibrium",
   inherit = ODE,
+  
   private = list(
     vary = NULL,
     range = NULL,
     max.iter = NULL,
     error = NULL,
     
-    eq = function(time, y0, parms, ...) {
-      n = length(time)
-      y = NULL
-      for (i in 1:private$max.iter) {
-        sol = super$run(time, y0, parms, ...)
-        y = unlist(sol[nrow(sol), -1])
-        e = sqrt(sum((y0-y)^2))
+    # Compute equilibrium for one parameter setting by fixed-point iteration
+    eq = function(t, y0, parms, ...) {
+      y_prev <- y0
+      
+      for (i in seq_len(private$max.iter)) {
+        # We want the full final state each iteration, so request states only.
+        sol <- super$simulate(t, y_prev, parms, vars = names(y_prev), ...)
+        y_last <- unlist(sol[nrow(sol), -1, drop = TRUE])
+        
+        e <- sqrt(sum((y_prev - y_last)^2))
         if (!is.na(e) && e < private$error)
-          return(sol[nrow(sol), -1])
-        y0 = y
+          return(sol[nrow(sol), -1, drop = FALSE])
+        
+        y_prev <- y_last
       }
-      y0[1:length(y0)] = NA
-      as.data.frame(as.list(y0))
+      
+      # Non-convergence: return NA row with correct column structure
+      y_prev[] <- NA_real_
+      as.data.frame(as.list(y_prev))
     },
     
-    .simulate = function(time, y0, parms, ...) {
-      data = data.frame()
+    .simulate = function(t, y0, parms, ...) {
+      out <- data.frame()
+      
       if (is.null(private$vary)) {
-        data = rbind(data, private$eq(time, y0, parms))
+        out <- rbind(out, private$eq(t, y0, parms, ...))
       } else {
         for (v in private$range) {
-          parms[[private$vary]] = v
-          data = rbind(data, private$eq(time, y0, parms))
+          parms[[private$vary]] <- v
+          out <- rbind(out, private$eq(t, y0, parms, ...))
         }
       }
-      data
+      
+      out
     }
   ),
+  
   public = list(
-    #' @description constructor
-    #' @param model the model to simulate. It must be an object of a subclass
-    #' of `Model`.
-    initialize = function(model, vary=NULL, range=NULL, max.iter=100, error = 1e-6) {
+    #' @description
+    #' Construct an equilibrium finder.
+    #'
+    #' @param model A [Model] (or subclass).
+    #' @param vary Optional parameter name to vary.
+    #' @param range Numeric vector giving the values of `vary`.
+    #' @param max.iter Maximum iterations for the fixed-point iteration.
+    #' @param error Convergence tolerance.
+    initialize = function(model, vary = NULL, range = NULL, max.iter = 100, error = 1e-6) {
       super$initialize(model)
-      private$vary = vary
-      private$range = range
+      private$vary <- vary
+      private$range <- range
+      
       if (!is.null(vary)) {
-        if (!is.character(vary) && ! vary %in% model$parameters) 
+        if (!is.character(vary) || !(vary %in% model$parameters))
           stop("vary must be a parameter name")
-        if (!is.numeric(range)) 
+        if (!is.numeric(range))
           stop("range must be a numeric vector")
       }
-      private$max.iter = max.iter
-      private$error = error
+      
+      private$max.iter <- max.iter
+      private$error <- error
     },
     
-    #' @description simulate the model
-    #' @param t a numeric vector of times.
-    #' @param y0 a numeric vector of initial conditions.
-    #' @param parms a numeric vector of parameter values.
-    #' @param vars a character vector specifying the variable names to be returned. 
-    #' A variable can be either a compartment or a substitution
-    #' @param ... extra arguments to be passed to the `ode` method
-    #' substitutions that depend on the compartments are calculated 
-    #' and returned
-    #' @return a data frame which rows correspond to each time in `t`, 
-    #' and columns correspond to the variables specified in vars.
-    simulate = function(t, y0, parms=NULL, vars=names(y0), ...) {
-      data = super$simulate(t, y0, parms, vars, ...)
+    #' @description
+    #' Compute equilibria and return them as a data frame.
+    #'
+    #' If `vary` is set, the output includes an extra column with the parameter
+    #' values in `range`.
+    simulate = function(t, y0, parms = NULL, vars = names(y0), ...) {
+      data <- super$simulate(t, y0, parms, vars, ...)
+      
       if (!is.null(private$vary)) {
-        col = list()
-        col[[private$vary]] = private$range
-        data = cbind(as.data.frame(col), data)
+        col <- list()
+        col[[private$vary]] <- private$range
+        data <- cbind(as.data.frame(col), data)
       }
+      
       data
     }
   )
 )
-    
