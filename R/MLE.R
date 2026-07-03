@@ -69,45 +69,65 @@ MLE <- R6Class(
     interpret = function(result) {
       details = result@details
       if (details$convergence == 0) {
+        estimate = bbmle::coef(result)
         if (private$.CI) {
-          ci = confint(result)
+          ci = bbmle::confint(result)
           if ("mle2" %in% class(ci)) {
-            x = coef(ci)
-            n = names(coef(result))
+            x = bbmle::coef(ci)
+            n = names(estimate)
             error = paste(sapply(1:length(x), function(i) {
               paste0(n[[i]], "=", x[[i]])
             }), collapse=", ")
             stop("a better result is found: ", error)
           }
         } else ci = NULL
-        as.data.frame(cbind(mean=coef(result), ci))
+        as.data.frame(cbind(mean=estimate, ci))
       } else {
         .last.fit <<- result
         cat("stopped at\n")
-        print(coef(result))
+        print(bbmle::coef(result))
         stop("Error (", details$convergence, "): ", details$message)
       }
     },
     
-    fit.info = function(initial.values, parms, ...) {
+    fit.info = function(initial.values, parms, guess, ...) {
       # split private$.likelihood$par from parms
       parms = as.list(parms)
       v = parms[private$.par.likelihood]
       for (i in private$.par.likelihood) {
         parms[[i]] = NULL
       }
-      info = super$fit.info(initial.values, parms, ...)
+      
+      likelihood.fit = character(0)
+      likelihood.fixed = list()
+      likelihood.formula = list()
+      
       for (i in private$.par.likelihood) {
         if (is.na(v[[i]]) || is.null(v[[i]])) {
-          info$fit = c(info$fit, i)
+          likelihood.fit = c(likelihood.fit, i)
         } else if (is(v[[i]], "Expression")) {
-          info$formula = c(info$formula, v[i])
+          likelihood.formula = c(likelihood.formula, v[i])
         } else if (is.numeric(v[[i]])) {
-          info$fixed[[i]] = v[[i]]
+          likelihood.fixed[[i]] = v[[i]]
         } else {
           stop("Invalid value for likelihood parameter ", i, ": ", v[[i]])
         }
       }
+      
+      model.guess = guess[setdiff(names(guess), private$.par.likelihood)]
+      info = super$fit.info(initial.values, parms, model.guess, ...)
+      
+      unexpected = intersect(names(guess), setdiff(private$.par.likelihood, likelihood.fit))
+      if (length(unexpected) == 1) stop("guess contains extra parameter: ", unexpected)
+      if (length(unexpected) > 1) stop("guess contains extra parameters: ", paste(unexpected, collapse = ", "))
+      
+      missed = setdiff(likelihood.fit, names(guess))
+      if (length(missed) == 1) stop("guess is missing parameter: ", missed)
+      if (length(missed) > 1) stop("guess is missing parameters: ", paste(missed, collapse = ", "))
+      
+      info$guess = guess
+      info$formula = c(info$formula, likelihood.formula)
+      info$fixed = c(info$fixed, likelihood.fixed)
       info
     }
   ),
@@ -136,8 +156,7 @@ MLE <- R6Class(
       if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
         stop("likelihood must be a Distribution object")
       private$.likelihood = likelihood
-      l = formals(likelihood$log.likelihood)
-      if (length(l) >= 3) private$.par.likelihood = names(l[3:length(l)])
+      private$.par.likelihood = likelihood$parameters
       private$.CI = CI
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     }

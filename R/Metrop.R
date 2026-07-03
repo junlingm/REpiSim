@@ -34,6 +34,7 @@ Metrop <- R6::R6Class(
   private = list(
     #' @field .likelihood Distribution object defining the likelihood
     .likelihood = NULL,
+    .par.likelihood = NULL,
     
     #' Compute log-posterior for a proposed parameter vector.
     #'
@@ -99,6 +100,46 @@ Metrop <- R6::R6Class(
       res
     },
     
+    fit.info = function(initial.values, parms, guess, ...) {
+      parms <- as.list(parms)
+      v <- parms[private$.par.likelihood]
+      for (i in private$.par.likelihood) {
+        parms[[i]] <- NULL
+      }
+      
+      likelihood.fit <- character(0)
+      likelihood.fixed <- list()
+      likelihood.formula <- list()
+      
+      for (i in private$.par.likelihood) {
+        if (is.na(v[[i]]) || is.null(v[[i]])) {
+          likelihood.fit <- c(likelihood.fit, i)
+        } else if (is(v[[i]], "Expression")) {
+          likelihood.formula <- c(likelihood.formula, v[i])
+        } else if (is.numeric(v[[i]])) {
+          likelihood.fixed[[i]] <- v[[i]]
+        } else {
+          stop("Invalid value for likelihood parameter ", i, ": ", v[[i]])
+        }
+      }
+      
+      model.guess <- guess[setdiff(names(guess), private$.par.likelihood)]
+      info <- super$fit.info(initial.values, parms, model.guess, ...)
+      
+      unexpected <- intersect(names(guess), setdiff(private$.par.likelihood, likelihood.fit))
+      if (length(unexpected) == 1) stop("guess contains extra parameter: ", unexpected)
+      if (length(unexpected) > 1) stop("guess contains extra parameters: ", paste(unexpected, collapse = ", "))
+      
+      missed <- setdiff(likelihood.fit, names(guess))
+      if (length(missed) == 1) stop("guess is missing parameter: ", missed)
+      if (length(missed) > 1) stop("guess is missing parameters: ", paste(missed, collapse = ", "))
+      
+      info$guess <- guess
+      info$formula <- c(info$formula, likelihood.formula)
+      info$fixed <- c(info$fixed, likelihood.fixed)
+      info
+    },
+    
     #' Summarize posterior samples (mean and 95% interval).
     interpret = function(result) {
       s <- summary(coda::as.mcmc(result$batch), quantiles = c(0.025, 0.975))
@@ -139,6 +180,7 @@ Metrop <- R6::R6Class(
       if (!inherits(likelihood, "Distribution"))
         stop("likelihood must be a Distribution object")
       private$.likelihood <- likelihood
+      private$.par.likelihood <- likelihood$parameters
       super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
     }
   ),

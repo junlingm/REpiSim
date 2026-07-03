@@ -1,258 +1,272 @@
-#' An R6 class that defines a distribution to be used as either a likelihood or a prior.
-#' 
-#' @details Each Distribution object must provide two methods, a "log.density" method
-#' which is the log-density function. In addition, a "log.likelihood" method which is
-#' the log-likelihood function and the distirbution parameters
+#' Declare a probability distribution family
+#'
+#' A distribution family is declared by its canonical density parameters and
+#' the density function that evaluates them. Calling the family with parameter
+#' values returns a `Distribution` object.
+#'
+#' If all canonical parameters are fixed, the returned object provides
+#' `log.density(x)`. If one or more canonical parameters are missing, they are
+#' computed from `mean` and any free parameters, and the returned object provides
+#' `log.likelihood(x, mean, ...)`.
+#'
+#' @param canonical A named list of expressions defining each canonical density
+#'   parameter in terms of `mean` and/or other canonical parameters.
+#' @param density A density function accepting the canonical parameters and
+#'   `log = TRUE`.
+#' @return A distribution-family function.
 #' @name Distribution
-#' @docType class
 #' @export
+Distribution <- function(canonical, density) {
+  if (!is.list(canonical) || length(canonical) == 0)
+    stop("canonical must be a non-empty named list")
+  
+  ns <- names(canonical)
+  if (is.null(ns) || any(ns == ""))
+    stop("canonical parameters must be named")
+  if (!identical(ns, make.names(ns)))
+    stop("canonical parameter names must be syntactic R names")
+  
+  if (!is.function(density))
+    stop("density must be a function")
+  
+  canonical <- lapply(canonical, function(x) {
+    if (is.null(x)) NULL else if (is.call(x) || is.name(x)) x else substitute(x)
+  })
+  
+  family <- eval(parse(text = paste0("function(", paste(ns, collapse = ", "), ") NULL")))
+  body(family) <- quote(distribution_instance(canonical, density, as.list(match.call())[-1]))
+  
+  class(family) <- c("DistributionFamily", class(family))
+  attr(family, "canonical") <- canonical
+  attr(family, "density") <- density
+  family
+}
 
-Distribution <- R6Class(
-  "Distribution",
-  private = list(
-    ## the log likelihood
-    .log.likelihood = NULL,
-    ## the log density
-    .log.density = NULL
-  ),
-  public = list(
-    #' @param ... the parameters needed to specify the distribution. 
-    #' @param .density the density function
-    #' @details to use this object as a likelihood, additional parameters that are needed must
-    #' be provided as NA, while the other parameters that needs to be inferred from the mean
-    #' and the estimated parameters must be provided as a formula
-    initialize = function(..., .density) {
-      if (is.null(.density))
-        stop(".density must be provided to initialize a Distribution object")
-      args = list(...)
-      ns = names(args)
-      if (is.null(ns) || any(ns=="")) 
-        stop("Distribution parameters must be named")
-      # is this a distribution? if so, then the arguments in ... must all be numeric
-      if (all(is.numeric(unlist(args)))) {
-        call.args = c(x=as.name("x"), args, log=TRUE)
-        private$.log.density = function(x) {
-          do.call(.density, call.args)
-        }
-      } else { # otherwise, this is a likelihood
-        call.args = list(x=NA, mean=NA)
-        par = list()
-        extra = character() # parameters in formula
-        expr = list() #$ the list of formula defining parameters
-        for (n in ns) {
-          v = args[[n]]
-          if (is.call(v)) {
-            e = Expression$new(v)
-            expr[[n]] = e
-            extra = c(extra, e$parms)
-            par[[n]] = as.name(n)
-          } else if (is.name(v)) {
-            extra = c(extra, as.character(v))
-            par[[n]] = v
-          } else if (is.na(v)) {
-            if (n != "mean") call.args[[n]] = NA
-            par[[n]] = as.name(n)
-          } else par[[n]] = v
-        }
-        expr = expr[order(expr)]
-        # statements calculating parameters
-        stmt = sapply(names(expr), function(n) {
-          e = expr[[n]]
-          call("<-", as.name(n), e$expr)
-        })
-        # add in parameters in the formula
-        extra = setdiff(extra, ns)
-        if (length(extra) > 0) call.args[extra] = NA
-        density = as.call(c(
-          list(as.name(".density"), as.name("x")), 
-          par, log=TRUE
-        ))
-        sum = call("sum", density)
-        body <- as.call(c(as.name("{"), stmt, sum))
-        call.args = c(call.args, body)
-        private$.log.likelihood = as.function(call.args)
+#' @export
+`$.DistributionFamily` <- function(x, name) {
+  switch(
+    name,
+    canonical = attr(x, "canonical"),
+    density = attr(x, "density"),
+    new = x,
+    stop("unknown distribution-family field: ", name)
+  )
+}
+
+distribution_symbols <- function(expr) {
+  if (is.null(expr)) return(character(0))
+  setdiff(all.names(expr, functions = FALSE, unique = TRUE), "mean")
+}
+
+distribution_is_missing <- function(x) {
+  missing(x) || is.null(x) || (length(x) == 1 && is.atomic(x) && is.na(x))
+}
+
+distribution_instance <- function(canonical, density, args) {
+  cn <- names(canonical)
+  supplied <- names(args)
+  if (length(args) > length(cn))
+    stop("too many distribution parameters")
+  
+  if (length(args) > 0) {
+    if (is.null(supplied)) supplied <- rep("", length(args))
+    unnamed <- which(supplied == "")
+    if (length(unnamed) > 0)
+      supplied[unnamed] <- cn[unnamed]
+    names(args) <- supplied
+  } else {
+    supplied <- character(0)
+  }
+  
+  bad <- setdiff(supplied, cn)
+  if (length(bad) > 0)
+    stop("unknown distribution parameter", if (length(bad) > 1) "s" else "",
+         ": ", paste(bad, collapse = ", "))
+  
+  fixed <- list()
+  missing_params <- character(0)
+  
+  for (p in cn) {
+    if (!p %in% supplied || distribution_is_missing(args[[p]])) {
+      missing_params <- c(missing_params, p)
+    } else {
+      fixed[[p]] <- args[[p]]
+    }
+  }
+  
+  if (length(missing_params) == 0) {
+    log.density <- function(x) {
+      do.call(density, c(list(x = x), fixed, list(log = TRUE)))
+    }
+    
+    return(structure(
+      list(
+        canonical = canonical,
+        density = density,
+        values = fixed,
+        parameters = character(0),
+        par = character(0),
+        log.density = log.density,
+        log.likelihood = NULL
+      ),
+      class = "Distribution"
+    ))
+  }
+  
+  free <- character(0)
+  derived <- list()
+  available <- names(fixed)
+  
+  for (p in cn) {
+    if (!p %in% missing_params) next
+    
+    expr <- canonical[[p]]
+    symbols <- distribution_symbols(expr)
+    
+    if (is.null(expr) || (p != "mean" && identical(expr, as.name(p))) || p %in% symbols) {
+      free <- union(free, p)
+      available <- union(available, p)
+      next
+    }
+    
+    needed <- setdiff(symbols, available)
+    if (length(needed) > 0) {
+      unknown <- setdiff(needed, cn)
+      if (length(unknown) > 0)
+        stop("unknown symbol", if (length(unknown) > 1) "s" else "",
+             " in canonical expression for ", p, ": ",
+             paste(unknown, collapse = ", "))
+      
+      free <- union(free, needed)
+      available <- union(available, needed)
+    }
+    
+    derived[[p]] <- expr
+    available <- union(available, p)
+  }
+  
+  log.likelihood <- function(x, mean, ...) {
+    extra <- list(...)
+    extra_names <- names(extra)
+    if (length(free) > 0 && (is.null(extra_names) || any(extra_names == "")))
+      stop("distribution parameters must be named")
+    
+    missing_free <- setdiff(free, extra_names)
+    if (length(missing_free) > 0)
+      stop("missing distribution parameter", if (length(missing_free) > 1) "s" else "",
+           ": ", paste(missing_free, collapse = ", "))
+    
+    unused <- setdiff(extra_names, free)
+    if (length(unused) > 0)
+      stop("unused distribution parameter", if (length(unused) > 1) "s" else "",
+           ": ", paste(unused, collapse = ", "))
+    
+    env <- list2env(c(list(mean = mean), fixed, extra), parent = parent.frame())
+    params <- vector("list", length(cn))
+    names(params) <- cn
+    
+    for (p in cn) {
+      if (!is.null(fixed[[p]])) {
+        params[[p]] <- fixed[[p]]
+      } else if (p %in% free) {
+        params[[p]] <- get(p, envir = env, inherits = FALSE)
+      } else {
+        params[[p]] <- eval(derived[[p]], envir = env)
+        assign(p, params[[p]], envir = env)
       }
     }
-  ),
-  active = list(
-    #' @field log.likelihood The log-likelihood function, which takes as least two parameters:
-    #' 
-    #' x the observation to calculate the likelihood
-    #' 
-    #' mean the mean of the distribution. This typically corresponds to the model solution
-    #' 
-    #' ... the parameters of the distribution,  in addition to the mean, to calculate the 
-    #' likelihood
-    #' 
-    #' It return the log likelihood
-    log.likelihood = function() {
-      private$.log.likelihood
-    },
-
-    #' @field log.density the log-density function that takes a single paramter x,  which is
-    #' the value where the density is evaluated at.
-    #' it returns the log-density at x
-    log.density = function() {
-      private$.log.density
-    }
+    
+    sum(do.call(density, c(list(x = x), params, list(log = TRUE))))
+  }
+  
+  structure(
+    list(
+      canonical = canonical,
+      density = density,
+      values = fixed,
+      parameters = free,
+      par = free,
+      log.density = NULL,
+      log.likelihood = log.likelihood
+    ),
+    class = "Distribution"
   )
-)
+}
 
 #' The Poisson distribution
-#' 
+#'
 #' @name Poisson
-#' @docType class
 #' @export
-
-Poisson <- R6Class(
-  "Poisson",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param lambda the mean of the Poisson distribution. When getting the log-likelihood,
-    #' this parameter is unused.
-    initialize = function(lambda) {
-      if (missing(lambda) || is.na(lambda)) lambda = quote(mean)
-      super$initialize(lambda = lambda, .density = dpois)
-    }
-  )
+Poisson <- Distribution(
+  canonical = list(lambda = quote(mean)),
+  density = dpois
 )
 
 #' The negative binomial distribution
-#' 
+#'
 #' @name NBinom
-#' @docType class
 #' @export
-
-NBinom <- R6Class(
-  "NBinom",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param size the size parameter of the negative binomial distribution
-    #' @param prob the probability parameter of the negative binomial distribution
-    initialize = function(size, prob) {
-      if (missing(size)) {
-        size = quote(mean*prob/(1-prob))
-      } else if (missing(prob)) {
-        prob = quote(size/(mean+size))
-      }
-      super$initialize(size = size, prob = prob, .density = dnbinom)
-    }
-  )
+NBinom <- Distribution(
+  canonical = list(
+    size = quote(mean * prob / (1 - prob)),
+    prob = quote(size / (mean + size))
+  ),
+  density = dnbinom
 )
 
 #' The normal distribution
-#' 
+#'
 #' @name Normal
-#' @docType class
 #' @export
-#' 
-
-Normal <- R6Class(
-  "Normal",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param mean the mean of the normal distribution
-    #' @param sd the standard deviation of the normal distribution
-    initialize = function(mean, sd) {
-      if (missing(mean)) {
-        mean = quote(mean)
-      } else if (missing(sd)) {
-        stop("the standard deviation must be provided for the normal distribution")
-      }
-      super$initialize(mean = mean, sd = sd, .density = dnorm)
-    }
-  )
+Normal <- Distribution(
+  canonical = list(
+    mean = quote(mean),
+    sd = quote(sd)
+  ),
+  density = dnorm
 )
 
 #' The uniform distribution
+#'
 #' @name Uniform
-#' @docType class
 #' @export
-
-Uniform <- R6Class(
-  "Uniform",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param min the minimum value of the uniform distribution
-    #' @param max the maximum value of the uniform distribution
-    initialize = function(min, max) {
-      if (missing(min)) {
-        min = quote(2*mean - max)
-      } else if (missing(max)) {
-        max = quote(2*mean + min)
-      }
-      super$initialize(min = min, max = max, .density = dunif)
-    }
-  )
+Uniform <- Distribution(
+  canonical = list(
+    min = quote(2 * mean - max),
+    max = quote(2 * mean + min)
+  ),
+  density = dunif
 )
 
 #' The exponential distribution
+#'
 #' @name Exponential
-#' @docType class
 #' @export
-
-Exponential <- R6Class(
-  "Exponential",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param rate the rate parameter of the exponential distribution
-    initialize = function(rate) {
-      if (missing(rate)) {
-        rate = quote(1/mean)
-      }
-      super$initialize(rate = rate, .density = dexp)
-    }
-  )
+Exponential <- Distribution(
+  canonical = list(rate = quote(1 / mean)),
+  density = dexp
 )
 
 #' The gamma distribution
+#'
 #' @name Gamma
-#' @docType class
 #' @export
-
-Gamma <- R6Class(
-  "Gamma",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param shape the shape parameter of the gamma distribution
-    #' @param scale the scale parameter of the gamma distribution, i.e., 1/rate
-    initialize = function(shape, scale) {
-      if (missing(shape)) {
-        shape = quote(mean/scale)
-      } else if (missing(scale)) {
-        scale = quote(mean/shape)
-      }
-      super$initialize(shape = shape, scale = scale, .density = dgamma)
-    }
-  )
+Gamma <- Distribution(
+  canonical = list(
+    shape = quote(mean / scale),
+    scale = quote(mean / shape)
+  ),
+  density = dgamma
 )
 
 #' The beta distribution
+#'
 #' @name Beta
-#' @docType class
 #' @export
-
-Beta <- R6Class(
-  "Beta",
-  inherit = Distribution,
-  
-  public = list(
-    #' @param shape1 the first shape parameter of the beta distribution
-    #' @param shape2 the second shape parameter of the beta distribution
-    initialize = function(shape1, shape2) {
-      if (missing(shape1)) {
-        # mean = shape1/(shape1 + shape2). calculate shape1 in terms of mean and shape2
-        shape1 = quote(mean/(1-mean)*shape2)
-      } else if (missing(shape2)) {
-        shape2 = quote((1-mean)/mean*a)
-      }
-      super$initialize(shape1 = shape1, shape2 = shape2, .density = dbeta)
-    }
-  )
+Beta <- Distribution(
+  canonical = list(
+    shape1 = quote(mean / (1 - mean) * shape2),
+    shape2 = quote((1 - mean) / mean * shape1)
+  ),
+  density = dbeta
 )
