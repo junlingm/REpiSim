@@ -15,22 +15,21 @@ R6 class to typeset R expressions as latex equations
 ## Method `TexFormatter$new`
 ## ------------------------------------------------
 
-tex = TexFormatter$new(II="[I\gets I]")
+tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
 tex$typeset(quote(sin(alpha*I)/II))
 
 ## ------------------------------------------------
 ## Method `TexFormatter$set.symbols`
 ## ------------------------------------------------
 
-tex = TexFormatter$new(II="[I\gets I]")
-tex$set.symbols(list(alpha="a")$typeset(quote(sin(alpha*I)/II))
-description typeset an R expression
+tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
+tex$set.symbols(list(alpha="a"))$typeset(quote(sin(alpha*I)/II))
 
 ## ------------------------------------------------
 ## Method `TexFormatter$typeset`
 ## ------------------------------------------------
 
-tex = TexFormatter$new(II="[I\gets I]")
+tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
 tex$typeset(quote(sin(alpha*I)/II))
 
 ## ------------------------------------------------
@@ -117,7 +116,7 @@ in this list. But they may be redefined here}
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{tex = TexFormatter$new(II="[I\gets I]")
+\preformatted{tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
 tex$typeset(quote(sin(alpha*I)/II))
 }
 \if{html}{\out{</div>}}
@@ -149,9 +148,8 @@ an invisible self to chain methods
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{tex = TexFormatter$new(II="[I\gets I]")
-tex$set.symbols(list(alpha="a")$typeset(quote(sin(alpha*I)/II))
-description typeset an R expression
+\preformatted{tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
+tex$set.symbols(list(alpha="a"))$typeset(quote(sin(alpha*I)/II))
 }
 \if{html}{\out{</div>}}
 
@@ -162,6 +160,7 @@ description typeset an R expression
 \if{html}{\out{<a id="method-TexFormatter-typeset"></a>}}
 \if{latex}{\out{\hypertarget{method-TexFormatter-typeset}{}}}
 \subsection{Method \code{typeset()}}{
+typeset an R expression
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{TexFormatter$typeset(R)}\if{html}{\out{</div>}}
 }
@@ -178,7 +177,7 @@ a character holding the latex commands
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{tex = TexFormatter$new(II="[I\gets I]")
+\preformatted{tex = TexFormatter$new(symbols = list(II="[I\\\\gets I]"))
 tex$typeset(quote(sin(alpha*I)/II))
 }
 \if{html}{\out{</div>}}

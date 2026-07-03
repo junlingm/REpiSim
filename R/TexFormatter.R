@@ -95,7 +95,7 @@ TexFormatter = R6Class(
     #' and infinity are automatically defined. They do not need to be defined 
     #' in this list. But they may be redefined here
     #' @examples 
-    #' tex = TexFormatter$new(II="[I\gets I]")
+    #' tex = TexFormatter$new(symbols = list(II="[I\\gets I]"))
     #' tex$typeset(quote(sin(alpha*I)/II))
     initialize = function(symbols=list()) {
       self$symbols = symbols
@@ -109,18 +109,18 @@ TexFormatter = R6Class(
     #' in this list. But they may be redefined here
     #' @return an invisible self to chain methods
     #' @examples
-    #' tex = TexFormatter$new(II="[I\gets I]")
-    #' tex$set.symbols(list(alpha="a")$typeset(quote(sin(alpha*I)/II))
+    #' tex = TexFormatter$new(symbols = list(II="[I\\gets I]"))
+    #' tex$set.symbols(list(alpha="a"))$typeset(quote(sin(alpha*I)/II))
     set.symbols = function(symbols) {
       self$symbols = merge(self$symbols, symbols)
       invisible(self)
     },
 
-    #' description typeset an R expression
+    #' @description typeset an R expression
     #' @param R the R expression to be typeset.
     #' @return a character holding the latex commands
     #' @examples
-    #' tex = TexFormatter$new(II="[I\gets I]")
+    #' tex = TexFormatter$new(symbols = list(II="[I\\gets I]"))
     #' tex$typeset(quote(sin(alpha*I)/II))
     typeset = function(R) {
       if (is.call(R)) {
