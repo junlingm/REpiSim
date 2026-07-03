@@ -102,7 +102,26 @@ Metrop <- R6::R6Class(
     #' Summarize posterior samples (mean and 95% interval).
     interpret = function(result) {
       s <- summary(coda::as.mcmc(result$batch), quantiles = c(0.025, 0.975))
-      as.data.frame(cbind(mean = s$statistics[, "Mean"], s$quantiles))
+      statistics <- s$statistics
+      quantiles <- s$quantiles
+      
+      if (is.null(dim(statistics))) {
+        statistics <- matrix(
+          statistics,
+          nrow = 1,
+          dimnames = list(colnames(result$batch), names(statistics))
+        )
+      }
+      
+      if (is.null(dim(quantiles))) {
+        quantiles <- matrix(
+          quantiles,
+          nrow = 1,
+          dimnames = list(rownames(statistics), names(quantiles))
+        )
+      }
+      
+      as.data.frame(cbind(mean = statistics[, "Mean"], quantiles))
     }
   ),
   
