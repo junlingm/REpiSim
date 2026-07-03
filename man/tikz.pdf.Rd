@@ -13,7 +13,7 @@ tikz.pdf(file, ..., fontsize = 12, preamble = NULL)
 
 \item{fontsize}{the fontsize in latex points.}
 
-\item{preambles}{the latex preambles}
+\item{preamble}{the latex preamble}
 }
 \description{
 generate a PDF file from the given latex commands
@@ -24,7 +24,7 @@ automatically loaded.
 }
 \examples{
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 tikz.pdf("SIR.pdf", flowchart(SIR, TexFormatter$new(),

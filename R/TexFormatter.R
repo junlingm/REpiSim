@@ -1,21 +1,22 @@
 #' A S3 method to merge two lists
-#' @param a a list
-#' @param b a list
+#' @param x a list
+#' @param y a list
+#' @param ... unused
 #' @return a merged list 
 #' @export
-merge.list = function(a, b) {
-  if (length(b) == 0) return(a)
-  if (length(a) == 0) return(b)
-  nb = names(b)
-  for (i in 1:length(b)) {
+merge.list = function(x, y, ...) {
+  if (length(y) == 0) return(x)
+  if (length(x) == 0) return(y)
+  nb = names(y)
+  for (i in 1:length(y)) {
     n = nb[[i]]
     if (!is.null(n) && n != "") {
-      a[n] = b[n] 
-    } else if (!(b[[i]] %in% a)) {
-      a = c(a, b[i])
+      x[n] = y[n] 
+    } else if (!(y[[i]] %in% x)) {
+      x = c(x, y[i])
     }
   }
-  a
+  x
 }
 
 #' R6 class to typeset R expressions as latex equations
@@ -179,13 +180,13 @@ TexFormatter = R6Class(
     
     #' @description enclose the tex commands in brackets
     #' @param ... the tex commands to enclose
-    #' @param closure a character vector of the brackets to be used. It defaults to `c("{","}")`.
+    #' @param closure a character vector of the brackets to be used. It defaults to `c("\\{", "\\}")`.
     #' If the vector is length 1, then it is used as both the opening and closing bracket.
     #' @return the enclosed tex command
     #' @examples 
     #' tex = TexFormatter$new()
     #' tex$enclose("\\bf This is a test")
-    #' tex$enclose(tex$typeset.equation(quote(alpha==beta)), 
+    #' tex$enclose(tex$typeset.equation(list(quote(alpha==beta))), 
     #'   closure=c("\\begin{align}", "\\end{align}"))
     enclose = function(..., closure=c("{", "}")) {
       if (length(closure) == 0) {
@@ -249,7 +250,7 @@ TexFormatter = R6Class(
     #' ampersand (&) is placed on the left, right or both sides of the equal (or other 
     #' comparison) sign. The default value is left. 
     #' @return a character holding the latex commands. 
-    #' @details Note that the latex environment itself (e.g., \\begin{align}\\end{align}) is not returned.
+    #' @details Note that the latex environment itself (e.g., \\begin\\{align\\}\\end\\{align\\}) is not returned.
     #' @examples 
     #' SIR = Model$new(
     #'   title = "SIR",

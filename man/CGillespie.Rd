@@ -23,7 +23,7 @@ if the `cpp11` package is installed.
 }
 \examples{
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 g = CGillespie$new(SIR)
@@ -67,7 +67,7 @@ the CGillespie class is only available if the cpp11
 package is installed.
 # an SIR model
 library(cpp11) # cpp11 is required to use CGillespie
-SIR = Compartmental$new(S, I, R, N=S+I+R, title="SIR")
+SIR = Compartmental$new(S, I, R, N=S+I+R)
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 g = CGillespie$new(SIR)

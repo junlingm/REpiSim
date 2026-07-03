@@ -6,16 +6,18 @@ Author: Junling Ma <junling@uvic.ca>
 Maintainer: Junling Ma <junling@uvic.ca>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-License: LGPL v3.0
+License: GPL-3
 Encoding: UTF-8
-Depends: 
-  R6
 Imports:
+  R6,
+  methods,
   tools
 Suggests:
   deSolve,
   cpp11,
-  bbmle
+  bbmle,
+  coda,
+  mcmc
 Collate:
   Expression.R
   Model.R

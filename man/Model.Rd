@@ -99,7 +99,7 @@ SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$
   compartment(R ~ gamma*I)$
   where(N = S + I + R)
-SIR$rename(S->U)$rename(beta->b)
+SIR$rename(U <- S)$rename(Pop <- N)
 print(SIR)
 }
 \section{Active bindings}{
@@ -319,7 +319,7 @@ SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$
   compartment(R ~ gamma*I)$
   where(N = S + I + R)
-SIR$rename(S->U)$rename(beta->b)
+SIR$rename(U <- S)$rename(Pop <- N)
 print(SIR)
 }
 \if{html}{\out{</div>}}

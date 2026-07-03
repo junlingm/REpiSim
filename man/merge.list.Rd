@@ -4,12 +4,14 @@
 \alias{merge.list}
 \title{A S3 method to merge two lists}
 \usage{
-\method{merge}{list}(a, b)
+\method{merge}{list}(x, y, ...)
 }
 \arguments{
-\item{a}{a list}
+\item{x}{a list}
 
-\item{b}{a list}
+\item{y}{a list}
+
+\item{...}{unused}
 }
 \value{
 a merged list

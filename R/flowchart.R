@@ -8,6 +8,7 @@ Regular.polygon <- function(n) {
 
 #' declare a regular star for the shape of a compartment in a flow char.
 #' @param n the number of sides for the star
+#' @param ratio the ratio between the inner and outer radii of the star
 #' @return a character holding the tikz option for a node
 #' @export
 Star <- function(n, ratio=NULL) {
@@ -110,7 +111,7 @@ Arc <- function(from, to, rate, label=NULL, edge=NULL) {
 #' the from, to and rate need not be specified.
 #' @examples
 #' # an SIR model
-#' SIR = Compartmental$new(S, I, R, title="SIR")
+#' SIR = Compartmental$new(S, I, R)
 #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 #' SIR$transition(I->R ~ gamma*I, name="recovery")
 #' flowchart(SIR, TexFormatter$new(),
@@ -202,12 +203,12 @@ change.extension <- function(file, ext.from, ext.to) {
 #' @param file the path to the to-be-generated pdf file.
 #' @param ... the latex commands.
 #' @param fontsize the fontsize in latex points.
-#' @param preambles the latex preambles
+#' @param preamble the latex preamble
 #' @details the document class is "standalone", the tikz package is
 #' automatically loaded.
 #' @examples
 #' # an SIR model
-#' SIR = Compartmental$new(S, I, R, title="SIR")
+#' SIR = Compartmental$new(S, I, R)
 #' SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 #' SIR$transition(I->R ~ gamma*I, name="recovery")
 #' tikz.pdf("SIR.pdf", flowchart(SIR, TexFormatter$new(),
@@ -217,7 +218,7 @@ change.extension <- function(file, ext.from, ext.to) {
 #' ))
 #' @export
 tikz.pdf <- function(file, ..., fontsize=12, preamble=NULL) {
-  if (!require(tools, quietly = TRUE)) {
+  if (!requireNamespace("tools", quietly = TRUE)) {
     stop("The tools package must be installed before using tikz.pdf.")
   }
   tex = TexFormatter$new()
@@ -253,7 +254,7 @@ tikz.pdf <- function(file, ..., fontsize=12, preamble=NULL) {
 }
 
 if (exists("TEST") && is.logical(TEST) && TEST) {
-  SIR = Compartmental$new(S, I, R, title="SIR")
+  SIR = Compartmental$new(S, I, R)
   SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
   SIR$transition(I->R ~ gamma*I, name="recovery")
   tikz.pdf("test.pdf", flowchart(SIR, TexFormatter$new(),

@@ -57,7 +57,7 @@ MLE <- R6Class(
       caller = list(...)
       if (is.null(caller$skip.hessian))
         caller$skip.hessian=!private$.CI
-      res = do.call(mle2, c(list(neglogL, start=as.list(guess)), caller))
+      res = do.call(bbmle::mle2, c(list(neglogL, start=as.list(guess)), caller))
       if (res@details$convergence == 10 && (is.null(private$.last) || any(coef(res)!=private$.last))) {
         private$.last <- coef(res)
         cat("The likelihood profiling did not converge. continue...\n")
@@ -131,7 +131,7 @@ MLE <- R6Class(
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
     initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character(), CI=TRUE) {
-      if (!require(bbmle))
+      if (!requireNamespace("bbmle", quietly = TRUE))
         stop("bbmle package is required for MLE calibration")
       if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
         stop("likelihood must be a Distribution object")

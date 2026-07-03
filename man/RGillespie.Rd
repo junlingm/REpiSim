@@ -20,7 +20,7 @@ to simulate a compartmental model.
 }
 \examples{
 # an SIR model
-SIR = Compartmental$new(S, I, R, title="SIR")
+SIR = Compartmental$new(S, I, R)
 SIR$transition(S->I ~ beta*S*I/N, N=S+I+R, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 g = RGillespie$new(SIR)

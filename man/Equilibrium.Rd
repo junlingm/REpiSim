@@ -13,18 +13,19 @@ An R6 class to calculate the equilibrium of a model
 Calculate the equilibrium of the model with a given initial condition
 }
 \examples{
+\dontrun{
 # an SIR model
-SIR = Model$new(title="SIR")
+SIR = Model$new()
 SIR$compartment(S ~ -beta*S*I/N)$
   compartment(I ~ beta*S*I/N - gamma*I)$
   compartment(R ~ gamma*I)$
   where(N = S + I + R)
 eq = Equilibrium$new(SIR, vary="beta", range=seq(0, 0.4, by=0.01))
-ode$simulate(
-  time=0:40, 
+eq$simulate(
+  t=0:40, 
   y0=c(S=10000, I=1, R=0), 
-  parms=c(beta=0.4, gamma=0.2), 
-  alias = FALSE) # N is not returned.
+  parms=c(beta=0.4, gamma=0.2))
+}
 }
 \section{Super classes}{
 \code{\link[REpiSim:Simulator]{REpiSim::Simulator}} -> \code{\link[REpiSim:ODE]{REpiSim::ODE}} -> \code{Equilibrium}

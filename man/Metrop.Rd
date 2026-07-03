@@ -10,7 +10,7 @@ An MCMC calibrator that uses the mcmc::metrop function
 An MCMC calibrator that uses the mcmc::metrop function
 }
 \section{Super classes}{
-\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{\link[REpiSim:Baysian]{REpiSim::Baysian}} -> \code{Metrop}
+\code{\link[REpiSim:Calibrator]{REpiSim::Calibrator}} -> \code{\link[REpiSim:Bayesian]{REpiSim::Bayesian}} -> \code{Metrop}
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
@@ -32,7 +32,7 @@ An MCMC calibrator that uses the mcmc::metrop function
 \if{html}{\out{
 <details open><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Baysian" data-id="calibrate"><a href='../../REpiSim/html/Baysian.html#method-Baysian-calibrate'><code>REpiSim::Baysian$calibrate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="REpiSim" data-topic="Bayesian" data-id="calibrate"><a href='../../REpiSim/html/Bayesian.html#method-Bayesian-calibrate'><code>REpiSim::Bayesian$calibrate()</code></a></span></li>
 </ul>
 </details>
 }}

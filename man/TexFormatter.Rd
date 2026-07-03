@@ -38,7 +38,7 @@ tex$typeset(quote(sin(alpha*I)/II))
 
 tex = TexFormatter$new()
 tex$enclose("\\\\bf This is a test")
-tex$enclose(tex$typeset.equation(quote(alpha==beta)), 
+tex$enclose(tex$typeset.equation(list(quote(alpha==beta))), 
   closure=c("\\\\begin{align}", "\\\\end{align}"))
 
 ## ------------------------------------------------
@@ -191,7 +191,7 @@ tex$typeset(quote(sin(alpha*I)/II))
 \subsection{Method \code{enclose()}}{
 enclose the tex commands in brackets
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TexFormatter$enclose(..., closure = c("{", "}"))}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{TexFormatter$enclose(..., closure = c("\\{", "\\}"))}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -199,7 +199,7 @@ enclose the tex commands in brackets
 \describe{
 \item{\code{...}}{the tex commands to enclose}
 
-\item{\code{closure}}{a character vector of the brackets to be used. It defaults to `c("{","}")`.
+\item{\code{closure}}{a character vector of the brackets to be used. It defaults to \code{c("\\{", "\\}")}.
 If the vector is length 1, then it is used as both the opening and closing bracket.}
 }
 \if{html}{\out{</div>}}
@@ -211,7 +211,7 @@ the enclosed tex command
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{tex = TexFormatter$new()
 tex$enclose("\\\\bf This is a test")
-tex$enclose(tex$typeset.equation(quote(alpha==beta)), 
+tex$enclose(tex$typeset.equation(list(quote(alpha==beta))), 
   closure=c("\\\\begin{align}", "\\\\end{align}"))
 }
 \if{html}{\out{</div>}}
@@ -315,7 +315,7 @@ comparison) sign. The default value is left.}
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-Note that the latex environment itself (e.g., \\begin{align}\\end{align}) is not returned.
+Note that the latex environment itself (e.g., \verb{\\begin\{align\}\\end\{align\}}) is not returned.
 }
 
 \subsection{Returns}{

@@ -8,6 +8,8 @@ Star(n, ratio = NULL)
 }
 \arguments{
 \item{n}{the number of sides for the star}
+
+\item{ratio}{the ratio between the inner and outer radii of the star}
 }
 \value{
 a character holding the tikz option for a node

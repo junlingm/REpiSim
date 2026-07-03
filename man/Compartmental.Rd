@@ -59,7 +59,7 @@ print(SIR)
 
 # an SIR model
 SIR = Compartmental$new()
-SIR$compartment("S")$compartment("I")$compartment(R)
+SIR$compartment("S")$compartment("I")$compartment("R")
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$where(N=S+I+R)
@@ -185,7 +185,7 @@ an invisible self for chaining methods
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# an SIR model
 SIR = Compartmental$new()
-SIR$compartment("S")$compartment("I")$compartment(R)
+SIR$compartment("S")$compartment("I")$compartment("R")
 SIR$transition(S->I ~ beta*S*I/N, name="infection")
 SIR$transition(I->R ~ gamma*I, name="recovery")
 SIR$where(N=S+I+R)
