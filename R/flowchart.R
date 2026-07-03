@@ -35,7 +35,7 @@ Node <- function(name, label, at,
                  shape=Node.shapes, 
                  rounded.corners = TRUE,
                  fill=NULL, ...) {
-  if (!is.numeric(at) && length(at) != 2)
+  if (!is.numeric(at) || length(at) != 2)
     stop("invalid coordinates (", at, ")")
   s = if (is.null(shape)) c() else {
     m = pmatch(shape[[1]], Node.shapes)
