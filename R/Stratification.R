@@ -6,16 +6,46 @@ strata_extract_index_args <- function(args, env) {
   ns <- names(args)
   if (is.null(ns)) ns <- rep("", length(args))
   idx <- which(ns == ".index")
-  if (length(idx) == 0) return(list(args = args, index_sets = list()))
   if (length(idx) > 1) stop(".index specified more than once")
 
-  index_sets <- strata_eval(args[[idx]], env)
-  if (!is.list(index_sets) || is.null(names(index_sets)) || any(names(index_sets) == ""))
-    stop(".index must be a named list")
+  if (length(idx) == 0) {
+    index_sets <- list()
+  } else {
+    index_sets <- strata_eval(args[[idx]], env)
+    if (!is.list(index_sets) || is.null(names(index_sets)) || any(names(index_sets) == ""))
+      stop(".index must be a named list")
+
+    args <- args[-idx]
+    ns <- ns[-idx]
+  }
+
+  inline_indices <- strata_formula_lhs_indices(args)
+  inline_args <- which(ns %in% inline_indices)
+  for (i in inline_args) {
+    index_name <- ns[[i]]
+    if (!is.null(index_sets[[index_name]]))
+      stop("index ", index_name, " specified more than once")
+    index_sets[[index_name]] <- strata_eval(args[[i]], env)
+  }
+  if (length(inline_args) > 0) args <- args[-inline_args]
 
   index_sets <- lapply(index_sets, as.character)
-  args <- args[-idx]
   list(args = args, index_sets = index_sets)
+}
+
+strata_formula_lhs_indices <- function(args) {
+  indices <- character(0)
+  for (arg in args) {
+    if (!is.call(arg) || !identical(arg[[1]], as.name("~"))) next
+    lhs <- arg[[2]]
+    if (!strata_is_indexed_call(lhs)) next
+    lhs_indices <- vapply(as.list(lhs)[-(1:2)], function(index) {
+      if (!is.name(index)) stop("compartment indices must be symbols")
+      as.character(index)
+    }, character(1))
+    indices <- union(indices, lhs_indices)
+  }
+  indices
 }
 
 strata_is_indexed_call <- function(expr) {

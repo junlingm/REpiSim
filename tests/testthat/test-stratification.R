@@ -43,6 +43,25 @@ test_that("symbolic sum and prod expand over model indices", {
   expect_equal(unname(eval(flat$X_A[[3]], envir = env)), (2 + 3) * (5 * 7) * 11)
 })
 
+test_that("constructor-level index arguments are consumed as index sets", {
+  groups <- c("A", "K")
+
+  model <- Model$new(
+    S[i] ~ -Sum(beta[i, j] * I[j], j = groups) * S[i],
+    I[i] ~ Sum(beta[i, j] * I[j], j = groups) * S[i] - gamma * I[i],
+    i = groups
+  )
+
+  expect_true(model$is_stratified())
+  expect_equal(model$compartments, c("S_A", "S_K", "I_A", "I_K"))
+  expect_equal(model$parameters, c("beta", "gamma"))
+  expect_equal(deparse1(model$equations$equations[[2]][[2]]), "I[i]")
+
+  flat <- model$flat_equations()$equations
+  expect_named(flat, c("S_A", "S_K", "I_A", "I_K"))
+  expect_match(deparse1(flat$I_A[[3]]), "gamma \\* I_A")
+})
+
 test_that("ODE R backend simulates stratified models with structured parameters", {
   skip_if_not_installed("deSolve")
 
