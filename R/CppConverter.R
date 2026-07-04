@@ -38,9 +38,13 @@ CppConverter <- R6Class(
       acosh = "acosh",
       atanh = "atanh",
       abs = "fabs",
+      round = "round",
       floor = "floor",
       ceiling = "ceil",
-      trunc = "trunc"
+      trunc = "trunc",
+      is.finite = "std::isfinite",
+      is.infinite = "std::isinf",
+      is.nan = "std::isnan"
     ),
     
     initialize = function(compartments, parameters, alias) {
@@ -73,6 +77,17 @@ CppConverter <- R6Class(
           },
           `*` = paste0(self$expr(C[[2]]), " * ", self$expr(C[[3]])),
           `/` = paste0(self$expr(C[[2]]), " / ", self$expr(C[[3]])),
+          `>` = paste0(self$expr(C[[2]]), " > ", self$expr(C[[3]])),
+          `<` = paste0(self$expr(C[[2]]), " < ", self$expr(C[[3]])),
+          `>=` = paste0(self$expr(C[[2]]), " >= ", self$expr(C[[3]])),
+          `<=` = paste0(self$expr(C[[2]]), " <= ", self$expr(C[[3]])),
+          `==` = paste0(self$expr(C[[2]]), " == ", self$expr(C[[3]])),
+          `!=` = paste0(self$expr(C[[2]]), " != ", self$expr(C[[3]])),
+          `!` = paste0("!", self$expr(C[[2]])),
+          `&` = paste0(self$expr(C[[2]]), " && ", self$expr(C[[3]])),
+          `&&` = paste0(self$expr(C[[2]]), " && ", self$expr(C[[3]])),
+          `|` = paste0(self$expr(C[[2]]), " || ", self$expr(C[[3]])),
+          `||` = paste0(self$expr(C[[2]]), " || ", self$expr(C[[3]])),
           `^` = paste0(
             "pow(",
             self$expr(self$remove_bracket(C[[2]])),
@@ -89,16 +104,43 @@ CppConverter <- R6Class(
           },
           {
             fn <- self$expr(C[[1]])
-            args <- paste(vapply(as.list(C[-1]), self$expr, character(1)), collapse = ", ")
+            args <- vapply(as.list(C[-1]), self$expr, character(1))
             if (fn %in% names(self$cpp_functions)) {
-              paste0(self$cpp_functions[[fn]], "(", args, ")")
+              paste0(self$cpp_functions[[fn]], "(", paste(args, collapse = ", "), ")")
+            } else if (identical(fn, "sign")) {
+              if (length(args) != 1)
+                stop("sign() expects one argument")
+              paste0("((", args[[1]], " > 0) - (", args[[1]], " < 0))")
+            } else if (identical(fn, "ifelse")) {
+              if (length(args) != 3)
+                stop("ifelse() expects three arguments")
+              paste0("((", args[[1]], ") ? (", args[[2]], ") : (", args[[3]], "))")
+            } else if (fn %in% c("min", "max")) {
+              if (length(args) == 0)
+                stop(fn, "() expects at least one argument")
+              reducer <- if (identical(fn, "min")) "fmin" else "fmax"
+              Reduce(function(a, b) paste0(reducer, "(", a, ", ", b, ")"), args)
+            } else if (fn %in% c("sum", "prod", "all", "any")) {
+              identity <- c(sum = "0", prod = "1", all = "true", any = "false")[[fn]]
+              op <- c(sum = " + ", prod = " * ", all = " && ", any = " || ")[[fn]]
+              if (length(args) == 0) {
+                identity
+              } else {
+                paste0("(", paste(args, collapse = op), ")")
+              }
+            } else if (exists("default.functions") && fn %in% default.functions) {
+              stop(
+                fn,
+                "() is allowed in R models but is not supported by the compiled C++ converter",
+                call. = FALSE
+              )
             } else {
-            # generic function call
+              # generic attached-function call
               paste0(
                 "cpp11::as_cpp<double>(",
                 fn,
                 "(",
-                args,
+                paste(args, collapse = ", "),
                 "))"
               )
             }

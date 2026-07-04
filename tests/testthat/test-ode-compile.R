@@ -39,3 +39,17 @@ test_that("compiled ODE models return substitutions like the R backend", {
 
   expect_equal(c_out, r_out, tolerance = 1e-7, ignore_attr = TRUE)
 })
+
+test_that("compiled ODE models handle common scalar math helpers", {
+  skip_if_not_installed("deSolve")
+  skip_if_not_installed("cpp11")
+
+  model <- Model$new(S ~ -ifelse(S > 0, max(0, exp(a)) * sign(S), 0))
+  y0 <- c(S = 10)
+  parms <- c(a = log(0.1))
+
+  r_out <- ODE$new(model)$simulate(0:3, y0 = y0, parms = parms)
+  c_out <- ODE$new(model, compile = TRUE)$simulate(0:3, y0 = y0, parms = parms)
+
+  expect_equal(c_out, r_out, tolerance = 1e-7, ignore_attr = TRUE)
+})
