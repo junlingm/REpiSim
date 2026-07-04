@@ -48,37 +48,6 @@ void REpiSimSetup(cpp11::environment functions)
 }
 ",
 
-    main = "[[cpp11::register]]
-cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::doubles parms) {
-  cpp11::writable::doubles y(y0);
-  cpp11::writable::doubles_matrix<> data(t.size(), y.size() + 1);
-
-  if (!y.named())
-    cpp11::stop(\"the initial values must be named\");
-
-  double time = t[0];
-  size_t i = 0;
-
-  while (i < t.size()) {
-    auto l = step(time, y, parms);
-    time = l[0];
-
-    while (i < t.size() && time >= t[i]) {
-      data(i, 0) = t[i];
-      for (size_t j = 1; j <= y.size(); ++j) {
-        data(i, j) = y[j-1];
-      }
-      ++i;
-    }
-
-    for (size_t j = 0; j < y.size(); ++j)
-      y[j] = l[j+1];
-  }
-
-  return data;
-}
-",
-
     result = list(
       "cpp11::writable::doubles __result(__y.size() + 1);",
       "for (size_t i = 0; i < __y.size(); ++i)",
@@ -218,6 +187,45 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
       )
     },
 
+    build_driver_cpp = function(name = "gillespie", step = "step") {
+      cpp <- CppConverter$new(private$compartments, private$parameters, private$alias)
+      stmts <- c(
+        "cpp11::writable::doubles y(y0);",
+        "cpp11::writable::doubles_matrix<> data(t.size(), y.size() + 1);",
+        "",
+        "if (!y.named())",
+        "  cpp11::stop(\"the initial values must be named\");",
+        "",
+        "double time = t[0];",
+        "size_t i = 0;",
+        "",
+        "while (i < t.size()) {",
+        paste0("  auto l = ", step, "(time, y, parms);"),
+        "  time = l[0];",
+        "",
+        "  while (i < t.size() && time >= t[i]) {",
+        "    data(i, 0) = t[i];",
+        "    for (size_t j = 1; j <= y.size(); ++j) {",
+        "      data(i, j) = y[j-1];",
+        "    }",
+        "    ++i;",
+        "  }",
+        "",
+        "  for (size_t j = 0; j < y.size(); ++j)",
+        "    y[j] = l[j+1];",
+        "}",
+        "",
+        "return data;"
+      )
+
+      paste0(
+        "[[cpp11::register]]\n",
+        "cpp11::doubles_matrix<> ", name,
+        "(cpp11::doubles t, cpp11::doubles y0, cpp11::doubles parms) ",
+        cpp$block(stmts, "")
+      )
+    },
+
     compile = function(model, r_model) {
       if (!requireNamespace("cpp11", quietly = TRUE)) {
         stop(
@@ -226,11 +234,13 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
         )
       }
 
+      step <- private$build_step_cpp(model)
+      driver <- private$build_driver_cpp()
       program <- paste(
         private$header,
         private$setup,
-        private$build_step_cpp(model),
-        private$main,
+        step,
+        driver,
         sep = "\n"
       )
 
@@ -240,6 +250,8 @@ cpp11::doubles_matrix<> gillespie(cpp11::doubles t, cpp11::doubles y0, cpp11::do
 
       list(
         program = program,
+        step = step,
+        driver = driver,
         lib = lib,
         simulate = simulate
       )
