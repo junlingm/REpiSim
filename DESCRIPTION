@@ -15,9 +15,11 @@ Imports:
 Suggests:
   deSolve,
   cpp11,
+  testthat (>= 3.0.0),
   bbmle,
   coda,
   mcmc
+Config/testthat/edition: 3
 Collate:
   Expression.R
   Model.R
