@@ -89,10 +89,10 @@ ODE <- R6Class(
     #' Construct an ODE simulator for a model.
     #'
     #' @param model A [Model] (or subclass) to simulate.
-    initialize = function(model) {
+    initialize = function(model, compile = FALSE) {
       if (!requireNamespace("deSolve", quietly = TRUE))
         stop("package 'deSolve' is not installed; the ODE simulator is unavailable")
-      super$initialize(model)
+      super$initialize(model, compile = compile)
     }
   ),
   

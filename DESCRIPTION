@@ -26,6 +26,7 @@ Collate:
   ODE.R
   Compartmental.R
   RGillespie.R
+  CppConverter.R
   CGillespie.R
   flowchart.R
   Calibrator.R

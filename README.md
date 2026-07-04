@@ -183,7 +183,7 @@ x <- sim$simulate(
 Stochastic (Gillespie) simulation:
 
 ```r
-sim <- RGillespie$new(m)
+sim <- Gillespie$new(m)
 x <- sim$simulate(
   t     = 0:100,
   y0    = c(S = 1000, I = 10, R = 0),
@@ -191,10 +191,147 @@ x <- sim$simulate(
 )
 ```
 
+Use `Gillespie$new(m, compile = TRUE)` to run the same simulator through the
+optional cpp11 backend.
+
 ### Choosing between `Model` and `Compartmental`
 
 - Use **`Model`** when you want full control over the differential equations or are working with non-compartmental systems.
 - Use **`Compartmental`** when your model is naturally described by transitions between states; this approach is often more concise and less error-prone.
+
+---
+
+## Calibration
+
+REpiSim provides a common calibration interface through the `Calibrator` class and its subclasses. A calibrator combines:
+
+- a model,
+- observed data,
+- a simulator,
+- a mapping from data columns to model variables, and
+- a rule for estimating unknown initial values and parameters.
+
+The main user-facing calibrators are:
+
+- `MLE`, for maximum likelihood estimation using `bbmle`,
+- `Metrop`, for Bayesian calibration using `mcmc::metrop`, and
+- `LeastSquare`, for least-squares fitting.
+
+### Likelihood-based calibration
+
+As a small example, suppose an observed quantity decays exponentially:
+
+```r
+m <- Model$new(S ~ -a*S)
+
+dat <- data.frame(
+  time = 0:5,
+  obs  = c(10.0, 8.7, 7.6, 6.5, 5.8, 5.0)
+)
+```
+
+The data column `obs` is mapped to the model variable `S` using a formula:
+
+```r
+fit <- MLE$new(
+  model      = m,
+  time       = "time",
+  data       = dat,
+  likelihood = Normal(sd = 1),
+  obs ~ S,
+  CI = FALSE
+)
+
+fit$calibrate(
+  initial.values = c(S = 10),
+  parms          = numeric(),
+  guess          = c(a = 0.1)
+)
+```
+
+In `initial.values` and `parms`, numeric values are fixed. Omitted values are fitted. Thus, in the example above, `S(0)` is fixed at 10 and `a` is estimated.
+
+### Fitting transformed parameters
+
+Parameters may also be supplied as quoted expressions. This is useful for enforcing constraints. For example, to estimate an unconstrained parameter `b` while forcing `a > 0`, write:
+
+```r
+fit$calibrate(
+  initial.values = c(S = 10),
+  parms          = list(a = quote(exp(b))),
+  guess          = c(b = log(0.1))
+)
+```
+
+The calibrator fits `b`, then computes `a = exp(b)` before simulating the model.
+
+The same pattern works for likelihood parameters. For example, a normal likelihood can estimate `log_sd` while using `sd = exp(log_sd)`:
+
+```r
+fit <- MLE$new(
+  model      = m,
+  time       = "time",
+  data       = dat,
+  likelihood = Normal(sd = quote(exp(log_sd))),
+  obs ~ S,
+  CI = FALSE
+)
+
+fit$calibrate(
+  initial.values = c(S = 10),
+  parms          = numeric(),
+  guess          = c(a = 0.1, log_sd = 0)
+)
+```
+
+### Distributions
+
+Distributions are declared by their canonical parameters and density functions. The built-in distributions can be used either as fully specified prior distributions or as mean-parameterized likelihoods.
+
+For example:
+
+```r
+Normal(mean = 0, sd = 1)  # fully specified density
+Normal(sd = 1)            # likelihood: mean comes from the model
+Poisson()                 # likelihood: lambda is the model mean
+NBinom(size = 10)         # likelihood: prob is computed from mean and size
+```
+
+### Bayesian calibration
+
+`Metrop` uses the same data/model/mapping interface as `MLE`, but calibration additionally requires priors and an initial guess.
+
+```r
+bfit <- Metrop$new(
+  model      = m,
+  time       = "time",
+  data       = dat,
+  likelihood = Normal(sd = quote(exp(log_sd))),
+  obs ~ S
+)
+
+bfit$calibrate(
+  initial.values = c(S = 10),
+  parms          = list(a = quote(exp(b))),
+  priors         = list(
+    b      = Normal(mean = log(0.1), sd = 1),
+    log_sd = Normal(mean = 0, sd = 1)
+  ),
+  guess = c(b = log(0.1), log_sd = 0),
+  nbatch = 1000
+)
+```
+
+Prior distributions can depend on previously defined parameters by using quoted expressions. For example, the following prior specification enforces `a < b`:
+
+```r
+priors <- list(
+  a = Uniform(min = 0, max = 1),
+  b = Uniform(min = quote(a), max = 1)
+)
+```
+
+When evaluating the prior for `b`, the calibrator first uses the current value of `a` to compute the lower bound.
 
 ---
 
@@ -211,5 +348,6 @@ REpiSim provides tools to:
 - define ODE models using symbolic equations,
 - define compartmental models using transition rules,
 - typeset equations in LaTeX,
-- simulate models deterministically and stochastically, and
+- simulate models deterministically and stochastically,
+- calibrate models using likelihood-based or Bayesian methods, and
 - generate flowcharts for visualization.

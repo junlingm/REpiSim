@@ -54,7 +54,7 @@ D = function(x, ...) {
 #'
 #' A `Model` can be:
 #' - simulated numerically via the `ODE` class (wrapper around `deSolve`),
-#' - simulated stochastically (for compartmental models) via `RGillespie`,
+#' - simulated stochastically (for compartmental models) via `Gillespie`,
 #' - typeset into LaTeX via `TexFormatter`.
 #'
 #' @section Construction:
