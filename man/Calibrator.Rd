@@ -90,13 +90,12 @@ Calibrate the model to data
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{initial.values}}{the initial values for the model. The parameters 
-that need to be estimate should be NA, those that do not need to be
-estimated must contain a finite value.}
+\item{\code{initial.values}}{Named initial values; omitted values are estimated.
+Values may also be quoted expressions, e.g. \code{I0 = quote(exp(log_I0))}.}
 
-\item{\code{parms}}{the parameter values of the model. The parameters 
-that need to be estimate should be NA, those that do not need to be
-estimated must contain a finite value.}
+\item{\code{parms}}{Named parameter values; omitted values are estimated. Values
+may also be quoted expressions, e.g. \code{a = quote(exp(b))}, to fit a
+transformed parameter.}
 
 \item{\code{guess}}{the initial guess of the parameters to be fitted}
 

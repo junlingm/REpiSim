@@ -114,10 +114,10 @@ Metrop <- R6::R6Class(
       likelihood.formula <- list()
       
       for (i in private$.par.likelihood) {
-        if (is.na(v[[i]]) || is.null(v[[i]])) {
+        if (calibrator.is.missing(v[[i]])) {
           likelihood.fit <- c(likelihood.fit, i)
-        } else if (is(v[[i]], "Expression")) {
-          likelihood.formula <- c(likelihood.formula, v[i])
+        } else if (calibrator.is.formula(v[[i]])) {
+          likelihood.formula[[i]] <- calibrator.as.expression(v[[i]])
         } else if (is.numeric(v[[i]])) {
           likelihood.fixed[[i]] <- v[[i]]
         } else {
@@ -125,7 +125,13 @@ Metrop <- R6::R6Class(
         }
       }
       
-      model.guess <- guess[setdiff(names(guess), private$.par.likelihood)]
+      likelihood.extra <- if (length(likelihood.formula) > 0) {
+        needed <- Reduce(function(extra, f) union(f$parms, extra), likelihood.formula, init = character())
+        setdiff(needed, c(private$.model$compartments, private$.model$parameters, private$.par.likelihood))
+      } else character(0)
+      likelihood.fit <- c(likelihood.extra, likelihood.fit)
+      
+      model.guess <- guess[setdiff(names(guess), c(private$.par.likelihood, likelihood.extra))]
       info <- super$fit.info(initial.values, parms, model.guess, ...)
       
       unexpected <- intersect(names(guess), setdiff(private$.par.likelihood, likelihood.fit))

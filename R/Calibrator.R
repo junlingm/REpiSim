@@ -11,6 +11,18 @@
 #   in Bayesian/MCMC objectives that iterate over columns.
 # ==============================================================================
 
+calibrator.is.missing <- function(x) {
+  is.null(x) || (length(x) == 1 && is.atomic(x) && is.na(x))
+}
+
+calibrator.is.formula <- function(x) {
+  is(x, "Expression") || is.call(x) || is.name(x)
+}
+
+calibrator.as.expression <- function(x) {
+  if (is(x, "Expression")) x else Expression$new(x)
+}
+
 #' Base R6 class for calibrators
 #'
 #' @details
@@ -109,7 +121,7 @@ Calibrator <- R6::R6Class(
     
     #' Split initial values or parameters into fixed / formula / fitted parts.
     #'
-    #' @param x Named list/vector of values and/or Expression objects.
+    #' @param x Named list/vector of values and/or formulas.
     #' @param mode One of "initial.value" or "parameter".
     split = function(x, mode = c("initial.value", "parameter")) {
       mode <- match.arg(mode)
@@ -123,11 +135,11 @@ Calibrator <- R6::R6Class(
       extra <- setdiff(ns, set)
       if (length(extra) > 0) stop(paste(extra, collapse = ", "), " not defined in the model")
       
-      idx.values <- vapply(x, is.numeric, logical(1))
-      idx.formula <- vapply(x, function(y) is(y, "Expression"), logical(1))
+      idx.formula <- vapply(x, calibrator.is.formula, logical(1))
+      idx.values <- vapply(seq_along(x), function(i) is.numeric(x[[i]]) && !idx.formula[[i]], logical(1))
       
       x.values <- as.list(x[idx.values])
-      x.formula <- x[idx.formula]
+      x.formula <- lapply(x[idx.formula], calibrator.as.expression)
       x.fit <- setdiff(set, ns[idx.values | idx.formula])
       
       list(value = x.values, formula = x.formula, fit = x.fit)
@@ -263,9 +275,11 @@ Calibrator <- R6::R6Class(
     #' @description
     #' Calibrate the model to data.
     #'
-    #' @param initial.values Named initial values; values to estimate are indicated
-    #'   by omission and/or algorithm-specific conventions.
-    #' @param parms Named parameter values; values to estimate are indicated similarly.
+    #' @param initial.values Named initial values; omitted values are estimated.
+    #'   Values may also be quoted expressions, e.g. `I0 = quote(exp(log_I0))`.
+    #' @param parms Named parameter values; omitted values are estimated. Values
+    #'   may also be quoted expressions, e.g. `a = quote(exp(b))`, to fit a
+    #'   transformed parameter.
     #' @param guess Initial guesses for fitted quantities (format may be subclass-specific).
     #' @param ... Additional arguments forwarded to the subclass algorithm.
     calibrate = function(initial.values, parms, guess, ...) {

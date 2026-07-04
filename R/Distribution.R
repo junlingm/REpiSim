@@ -206,15 +206,16 @@ distribution_instance <- function(canonical, density, args, envir = parent.frame
   log.likelihood <- function(x, mean, ...) {
     extra <- list(...)
     extra_names <- names(extra)
-    if (length(free) > 0 && (is.null(extra_names) || any(extra_names == "")))
+    required <- c(dependencies, free)
+    if (length(required) > 0 && (is.null(extra_names) || any(extra_names == "")))
       stop("distribution parameters must be named")
     
-    missing_free <- setdiff(free, extra_names)
+    missing_free <- setdiff(required, extra_names)
     if (length(missing_free) > 0)
       stop("missing distribution parameter", if (length(missing_free) > 1) "s" else "",
            ": ", paste(missing_free, collapse = ", "))
     
-    unused <- setdiff(extra_names, free)
+    unused <- setdiff(extra_names, required)
     if (length(unused) > 0)
       stop("unused distribution parameter", if (length(unused) > 1) "s" else "",
            ": ", paste(unused, collapse = ", "))
@@ -230,8 +231,8 @@ distribution_instance <- function(canonical, density, args, envir = parent.frame
       formulas = lapply(formulas, function(e) e$expr),
       formula = formulas,
       dependencies = dependencies,
-      parameters = free,
-      par = free,
+      parameters = c(dependencies, free),
+      par = c(dependencies, free),
       log.density = NULL,
       log.likelihood = log.likelihood
     ),
