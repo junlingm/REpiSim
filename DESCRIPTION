@@ -27,9 +27,8 @@ Collate:
   Simulator.R
   ODE.R
   Compartmental.R
-  RGillespie.R
   CppConverter.R
-  CGillespie.R
+  Gillespie.R
   flowchart.R
   Calibrator.R
   LeastSquare.R

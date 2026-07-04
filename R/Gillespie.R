@@ -9,9 +9,7 @@
 # `$model`; when `compile = TRUE`, it also builds a cpp11 backend in `$compiled`
 # and uses that backend for simulation.
 #
-# `RGillespie` is retained as a compatibility wrapper for `compile = FALSE`.
-# `CGillespie` is defined in CGillespie.R as a compatibility wrapper for
-# `compile = TRUE`.
+# `RGillespie` and `CGillespie` are retained as compatibility wrappers.
 # ==============================================================================
 
 #' R6 class implementing the Gillespie method
@@ -365,6 +363,23 @@ RGillespie <- R6Class(
   public = list(
     initialize = function(model) {
       super$initialize(model, compile = FALSE)
+    }
+  )
+)
+
+#' R6 compatibility class for the compiled Gillespie backend
+#'
+#' `CGillespie$new(model)` is equivalent to `Gillespie$new(model, compile = TRUE)`.
+#'
+#' @docType class
+#' @export
+CGillespie <- R6Class(
+  "CGillespie",
+  inherit = Gillespie,
+
+  public = list(
+    initialize = function(model) {
+      super$initialize(model, compile = TRUE)
     }
   )
 )

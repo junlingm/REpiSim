@@ -1,4 +1,4 @@
-% Please edit documentation in R/RGillespie.R
+% Please edit documentation in R/Gillespie.R
 \name{Gillespie}
 \alias{Gillespie}
 \title{R6 class implementing the Gillespie method}
