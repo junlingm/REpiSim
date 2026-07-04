@@ -86,6 +86,9 @@ Model <- R6Class(
     .where = list(),         # named list: substitution name -> list(name, value)
     .formula = list(),       # named list: internal formula name -> Expression object
     .t = NULL,               # independent variable name (string). Invariant: ALWAYS a character scalar.
+    .index_sets = list(),    # named list: formula-local index symbol -> values
+    .indexed_formulas = list(), # constructor-level indexed formulas for display
+    .compartment_dimensions = list(), # base compartment -> unnamed dimension values
     
     # --------------------------------------------------------------------------
     # Internal helpers
@@ -193,6 +196,22 @@ Model <- R6Class(
         }
       }
       self$where(pairs = representation$substitutions)
+    },
+
+    make.equations = function() {
+      compartments = lapply(
+        private$.compartments,
+        function(C) {
+          call("==", call("'", as.name(C$name)), private$.formula[[C$value]]$expr)
+        }
+      )
+      where = lapply(
+        private$.where,
+        function(w) {
+          call("==", as.name(w$name), private$.formula[[w$value]]$expr)
+        }
+      )
+      list(equations = compartments, where = where)
     }
   ),
   
@@ -227,10 +246,38 @@ Model <- R6Class(
       private$.t = if (is.null(t) || t == "") "t" else if (is.character(t)) t else
         stop("Invalid independent variable name ", t)
       
+      call_env = parent.frame()
       args = as.list(substitute(list(...)))[-1]
+      index_info = strata_extract_index_args(args, call_env)
+      args = index_info$args
+      private$.index_sets = index_info$index_sets
       ns = names(args)
       
       if (length(args) > 0) {
+        if (length(private$.index_sets) > 0) {
+          formula_args = args[is.null(ns) | ns == ""]
+          private$.compartment_dimensions =
+            strata_collect_compartment_dimensions(formula_args, private$.index_sets)
+          private$.indexed_formulas = formula_args
+
+          expanded = unlist(
+            lapply(
+              formula_args,
+              strata_expand_model_formula,
+              index_sets = private$.index_sets,
+              compartment_dimensions = private$.compartment_dimensions,
+              env = call_env
+            ),
+            recursive = FALSE
+          )
+
+          for (eq in expanded) self$compartment(eq)
+
+          named_args = args[!is.null(ns) & ns != ""]
+          if (length(named_args) > 0) self$where(pairs = named_args)
+          return(invisible(self))
+        }
+
         for (i in seq_along(args)) {
           if (!is.null(ns) && ns[i] != "") {
             self$where(pairs = args[i])
@@ -469,9 +516,15 @@ Model <- R6Class(
       
       if (length(private$.compartments) > 0) {
         l = c(l, "  Compartments:")
-        for (c in private$.compartments) {
-          f = private$.formula[[c$value]]
-          l = c(l, paste0("    ", c$name, " ~ ", deparse(f$expr)))
+        if (length(private$.indexed_formulas) > 0) {
+          for (f in private$.indexed_formulas) {
+            l = c(l, paste0("    ", deparse(f)))
+          }
+        } else {
+          for (c in private$.compartments) {
+            f = private$.formula[[c$value]]
+            l = c(l, paste0("    ", c$name, " ~ ", deparse(f$expr)))
+          }
         }
       }
       
@@ -486,6 +539,22 @@ Model <- R6Class(
         l = c(l, paste0("  Parameters: ", paste(self$parameters, collapse = ", ")))
       
       paste(l, collapse = "\n")
+    },
+
+    flat_equations = function() {
+      private$make.equations()
+    },
+
+    flat_compartments = function() {
+      self$compartments
+    },
+
+    flat_parameters = function() {
+      self$parameters
+    },
+
+    is_stratified = function() {
+      length(private$.index_sets) > 0
     }
   ),
   
@@ -501,11 +570,12 @@ Model <- R6Class(
     #' - `equations`: named list of ODE equations as expressions
     #' - `where`: named list of substitutions as expressions
     equations = function() {
+      if (length(private$.indexed_formulas) == 0)
+        return(private$make.equations())
+
       compartments = lapply(
-        private$.compartments,
-        function(C) {
-          call("==", call("'", as.name(C$name)), private$.formula[[C$value]]$expr)
-        }
+        private$.indexed_formulas,
+        function(f) call("==", f[[2]], f[[3]])
       )
       where = lapply(
         private$.where,

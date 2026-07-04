@@ -226,8 +226,8 @@ Simulator <- R6Class(
         }
       }
 
-      private$compartments <- model$compartments
-      private$parameters <- model$parameters
+      private$compartments <- model$flat_compartments()
+      private$parameters <- model$flat_parameters()
 
       subst <- model$substitutions
       private$alias <- list()

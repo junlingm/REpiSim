@@ -22,6 +22,7 @@ Suggests:
 Config/testthat/edition: 3
 Collate:
   Expression.R
+  Stratification.R
   Model.R
   TexFormatter.R
   Simulator.R

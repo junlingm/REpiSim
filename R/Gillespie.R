@@ -115,8 +115,8 @@ void REpiSimSetup(cpp11::environment functions)
 
       body_calls <- c(
         as.name("{"),
-        private$format.var(model$compartments, "y"),
-        private$format.var(model$parameters, "parms"),
+        private$format.var(model$flat_compartments(), "y"),
+        private$format.var(model$flat_parameters(), "parms"),
         private$format.substitution(model$substitutions),
 
         call("<-", quote(.rates), private$format.rate(model$transitions)),
@@ -134,7 +134,7 @@ void REpiSimSetup(cpp11::environment functions)
             updates <- list()
 
             if (!is.null(tr$from)) {
-              idx_from <- which(tr$from == model$compartments)
+              idx_from <- which(tr$from == model$flat_compartments())
               updates <- c(updates, call(
                 "<-",
                 call("[[", quote(y), idx_from),
@@ -143,7 +143,7 @@ void REpiSimSetup(cpp11::environment functions)
             }
 
             if (!is.null(tr$to)) {
-              idx_to <- which(tr$to == model$compartments)
+              idx_to <- which(tr$to == model$flat_compartments())
               updates <- c(updates, call(
                 "<-",
                 call("[[", quote(y), idx_to),
