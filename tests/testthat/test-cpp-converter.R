@@ -6,6 +6,7 @@ test_that("CppConverter translates arithmetic and indexing expressions", {
   )
 
   expect_equal(cpp$expr(quote(beta * S^2 / (S + I))), "beta * pow(S, 2) / (S + I)")
+  expect_equal(cpp$expr(quote(exp(beta) * sqrt(S))), "exp(beta) * sqrt(S)")
   expect_equal(cpp$expr(quote(x[[i]])), "x[i]")
   expect_equal(cpp$expr(quote(x[[i]][[j]])), "x[i][j]")
 })

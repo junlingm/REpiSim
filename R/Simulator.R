@@ -239,15 +239,15 @@ Simulator <- R6Class(
       }
 
       private$.model <- private$build(model)
+      try({
+        environment(private$.model) <- attached.functions
+      }, silent = TRUE)
+
       private$.compiled <- if (isTRUE(compile)) {
         private$compile(model, private$.model)
       } else {
         NULL
       }
-
-      try({
-        environment(private$.model) <- attached.functions
-      }, silent = TRUE)
     },
 
     simulate = function(t, y0, parms = NULL, vars = names(y0), ...) {

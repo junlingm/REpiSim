@@ -20,6 +20,28 @@ CppConverter <- R6Class(
     compartments = NULL,
     parameters = NULL,
     alias = NULL,
+    cpp_functions = c(
+      exp = "exp",
+      log = "log",
+      log10 = "log10",
+      sqrt = "sqrt",
+      sin = "sin",
+      cos = "cos",
+      tan = "tan",
+      asin = "asin",
+      acos = "acos",
+      atan = "atan",
+      sinh = "sinh",
+      cosh = "cosh",
+      tanh = "tanh",
+      asinh = "asinh",
+      acosh = "acosh",
+      atanh = "atanh",
+      abs = "fabs",
+      floor = "floor",
+      ceiling = "ceil",
+      trunc = "trunc"
+    ),
     
     initialize = function(compartments, parameters, alias) {
       self$compartments <- compartments
@@ -66,14 +88,20 @@ CppConverter <- R6Class(
             paste0(self$expr(C[[2]]), "[", self$expr(C[[3]]), "]")
           },
           {
+            fn <- self$expr(C[[1]])
+            args <- paste(vapply(as.list(C[-1]), self$expr, character(1)), collapse = ", ")
+            if (fn %in% names(self$cpp_functions)) {
+              paste0(self$cpp_functions[[fn]], "(", args, ")")
+            } else {
             # generic function call
-            paste0(
-              "cpp11::as_cpp<double>(",
-              self$expr(C[[1]]),
-              "(",
-              paste(vapply(as.list(C[-1]), self$expr, character(1)), collapse = ", "),
-              "))"
-            )
+              paste0(
+                "cpp11::as_cpp<double>(",
+                fn,
+                "(",
+                args,
+                "))"
+              )
+            }
           }
         )
       } else {
