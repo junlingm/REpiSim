@@ -23,7 +23,9 @@ values returns a \code{Distribution} object.
 }
 \details{
 If all canonical parameters are fixed, the returned object provides
-\code{log.density(x)}. If one or more canonical parameters are missing, they are
-computed from \code{mean} and any free parameters, and the returned object
-provides \code{log.likelihood(x, mean, ...)}.
+\code{log.density(x)}. Fixed parameters may be expressions, such as
+\code{Uniform(min = quote(a), max = 1)}, and are evaluated from the context
+passed to \code{log.density()}. If one or more canonical parameters are missing,
+they are computed from \code{mean} and any free parameters, and the returned
+object provides \code{log.likelihood(x, mean, ...)}.
 }

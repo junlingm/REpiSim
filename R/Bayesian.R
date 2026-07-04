@@ -55,6 +55,10 @@ Bayesian <- R6::R6Class(
       if (!all(ok))
         stop("invalid priors for: ", paste(names(priors)[!ok], collapse = ", "))
       
+      ok <- vapply(priors, function(x) is.function(x$log.density), logical(1))
+      if (!all(ok))
+        stop("priors must have all canonical parameters fixed")
+      
       np <- names(priors)
       if (is.null(np) || any(np == ""))
         stop("priors must be named")

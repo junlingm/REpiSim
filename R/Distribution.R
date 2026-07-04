@@ -5,7 +5,9 @@
 #' values returns a `Distribution` object.
 #'
 #' If all canonical parameters are fixed, the returned object provides
-#' `log.density(x)`. If one or more canonical parameters are missing, they are
+#' `log.density(x)`. Fixed parameters may be expressions, such as
+#' `Uniform(min = quote(a), max = 1)`, and are evaluated from the context passed
+#' to `log.density()`. If one or more canonical parameters are missing, they are
 #' computed from `mean` and any free parameters, and the returned object provides
 #' `log.likelihood(x, mean, ...)`.
 #'
@@ -34,7 +36,7 @@ Distribution <- function(canonical, density) {
   })
   
   family <- eval(parse(text = paste0("function(", paste(ns, collapse = ", "), ") NULL")))
-  body(family) <- quote(distribution_instance(canonical, density, as.list(match.call())[-1]))
+  body(family) <- quote(distribution_instance(canonical, density, as.list(match.call())[-1], parent.frame()))
   
   class(family) <- c("DistributionFamily", class(family))
   attr(family, "canonical") <- canonical
@@ -62,8 +64,57 @@ distribution_is_missing <- function(x) {
   missing(x) || is.null(x) || (length(x) == 1 && is.atomic(x) && is.na(x))
 }
 
-distribution_instance <- function(canonical, density, args) {
+distribution_eval_args <- function(args, envir) {
+  lapply(args, eval, envir = envir)
+}
+
+distribution_as_formulas <- function(values) {
+  formulas <- list()
+  constants <- list()
+  
+  for (n in names(values)) {
+    v <- values[[n]]
+    if (is.call(v) || is.name(v)) {
+      formulas[[n]] <- Expression$new(v)
+    } else {
+      constants[[n]] <- v
+    }
+  }
+  
+  list(constants = constants, formulas = formulas)
+}
+
+distribution_eval_params <- function(cn, values, formulas, derived, free, density, x, mean = NULL, extra = list()) {
+  env <- list2env(c(extra, values), parent = parent.frame())
+  if (!is.null(mean)) assign("mean", mean, envir = env)
+  
+  if (length(formulas) > 0) {
+    formulas <- formulas[expr_order(formulas)]
+    for (n in names(formulas)) {
+      assign(n, eval(formulas[[n]]$expr, envir = env), envir = env)
+    }
+  }
+  
+  params <- vector("list", length(cn))
+  names(params) <- cn
+  
+  for (p in cn) {
+    if (exists(p, envir = env, inherits = FALSE)) {
+      params[[p]] <- get(p, envir = env, inherits = FALSE)
+    } else if (!is.null(derived[[p]])) {
+      params[[p]] <- eval(derived[[p]], envir = env)
+      assign(p, params[[p]], envir = env)
+    } else {
+      stop("missing distribution parameter: ", p)
+    }
+  }
+  
+  sum(do.call(density, c(list(x = x), params, list(log = TRUE))))
+}
+
+distribution_instance <- function(canonical, density, args, envir = parent.frame()) {
   cn <- names(canonical)
+  args <- distribution_eval_args(args, envir)
   supplied <- names(args)
   if (length(args) > length(cn))
     stop("too many distribution parameters")
@@ -83,20 +134,24 @@ distribution_instance <- function(canonical, density, args) {
     stop("unknown distribution parameter", if (length(bad) > 1) "s" else "",
          ": ", paste(bad, collapse = ", "))
   
-  fixed <- list()
+  supplied_values <- list()
   missing_params <- character(0)
   
   for (p in cn) {
     if (!p %in% supplied || distribution_is_missing(args[[p]])) {
       missing_params <- c(missing_params, p)
     } else {
-      fixed[[p]] <- args[[p]]
+      supplied_values[[p]] <- args[[p]]
     }
   }
+  split <- distribution_as_formulas(supplied_values)
+  fixed <- split$constants
+  formulas <- split$formulas
+  dependencies <- unique(unlist(lapply(formulas, function(e) e$parms), use.names = FALSE))
   
   if (length(missing_params) == 0) {
-    log.density <- function(x) {
-      do.call(density, c(list(x = x), fixed, list(log = TRUE)))
+    log.density <- function(x, ...) {
+      distribution_eval_params(cn, fixed, formulas, list(), character(0), density, x, extra = list(...))
     }
     
     return(structure(
@@ -104,6 +159,9 @@ distribution_instance <- function(canonical, density, args) {
         canonical = canonical,
         density = density,
         values = fixed,
+        formulas = lapply(formulas, function(e) e$expr),
+        formula = formulas,
+        dependencies = dependencies,
         parameters = character(0),
         par = character(0),
         log.density = log.density,
@@ -115,7 +173,7 @@ distribution_instance <- function(canonical, density, args) {
   
   free <- character(0)
   derived <- list()
-  available <- names(fixed)
+  available <- c(names(fixed), names(formulas))
   
   for (p in cn) {
     if (!p %in% missing_params) next
@@ -161,22 +219,7 @@ distribution_instance <- function(canonical, density, args) {
       stop("unused distribution parameter", if (length(unused) > 1) "s" else "",
            ": ", paste(unused, collapse = ", "))
     
-    env <- list2env(c(list(mean = mean), fixed, extra), parent = parent.frame())
-    params <- vector("list", length(cn))
-    names(params) <- cn
-    
-    for (p in cn) {
-      if (!is.null(fixed[[p]])) {
-        params[[p]] <- fixed[[p]]
-      } else if (p %in% free) {
-        params[[p]] <- get(p, envir = env, inherits = FALSE)
-      } else {
-        params[[p]] <- eval(derived[[p]], envir = env)
-        assign(p, params[[p]], envir = env)
-      }
-    }
-    
-    sum(do.call(density, c(list(x = x), params, list(log = TRUE))))
+    distribution_eval_params(cn, fixed, formulas, derived, free, density, x, mean = mean, extra = extra)
   }
   
   structure(
@@ -184,6 +227,9 @@ distribution_instance <- function(canonical, density, args) {
       canonical = canonical,
       density = density,
       values = fixed,
+      formulas = lapply(formulas, function(e) e$expr),
+      formula = formulas,
+      dependencies = dependencies,
       parameters = free,
       par = free,
       log.density = NULL,

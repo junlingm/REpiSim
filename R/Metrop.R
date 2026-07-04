@@ -48,7 +48,9 @@ Metrop <- R6::R6Class(
       all <- c(as.list(pars), fixed)
       
       # Log prior
-      lp <- sum(vapply(names(priors), function(n) priors[[n]]$log.density(all[[n]]), numeric(1)))
+      lp <- sum(vapply(names(priors), function(n) {
+        do.call(priors[[n]]$log.density, c(list(x = all[[n]]), all))
+      }, numeric(1)))
       if (!is.finite(lp)) return(-Inf)
       
       # Derived quantities (dependency order ensured upstream)
