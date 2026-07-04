@@ -87,8 +87,10 @@ Model <- R6Class(
     .formula = list(),       # named list: internal formula name -> Expression object
     .t = NULL,               # independent variable name (string). Invariant: ALWAYS a character scalar.
     .index_sets = list(),    # named list: formula-local index symbol -> values
+    .index_env = NULL,       # environment used to resolve formula-local bindings
     .indexed_formulas = list(), # constructor-level indexed formulas for display
     .compartment_dimensions = list(), # base compartment -> unnamed dimension values
+    .parameter_dimensions = list(), # indexed parameter -> unnamed dimension values
     
     # --------------------------------------------------------------------------
     # Internal helpers
@@ -251,6 +253,7 @@ Model <- R6Class(
       index_info = strata_extract_index_args(args, call_env)
       args = index_info$args
       private$.index_sets = index_info$index_sets
+      private$.index_env = call_env
       ns = names(args)
       
       if (length(args) > 0) {
@@ -258,6 +261,13 @@ Model <- R6Class(
           formula_args = args[is.null(ns) | ns == ""]
           private$.compartment_dimensions =
             strata_collect_compartment_dimensions(formula_args, private$.index_sets)
+          private$.parameter_dimensions =
+            strata_collect_parameter_dimensions(
+              formula_args,
+              private$.index_sets,
+              private$.compartment_dimensions,
+              call_env
+            )
           private$.indexed_formulas = formula_args
 
           expanded = unlist(
@@ -541,8 +551,36 @@ Model <- R6Class(
       paste(l, collapse = "\n")
     },
 
-    flat_equations = function() {
-      private$make.equations()
+    flat_equations = function(index_mode = c("name", "position")) {
+      index_mode <- match.arg(index_mode)
+      if (length(private$.indexed_formulas) == 0)
+        return(private$make.equations())
+
+      expanded = unlist(
+        lapply(
+          private$.indexed_formulas,
+          strata_expand_model_formula,
+          index_sets = private$.index_sets,
+          compartment_dimensions = private$.compartment_dimensions,
+          env = private$.index_env,
+          index_mode = index_mode
+        ),
+        recursive = FALSE
+      )
+
+      compartments = lapply(
+        expanded,
+        function(eq) call("==", call("'", eq[[2]]), eq[[3]])
+      )
+      names(compartments) <- vapply(expanded, function(eq) as.character(eq[[2]]), character(1))
+
+      where = lapply(
+        private$.where,
+        function(w) {
+          call("==", as.name(w$name), private$.formula[[w$value]]$expr)
+        }
+      )
+      list(equations = compartments, where = where)
     },
 
     flat_compartments = function() {
@@ -555,6 +593,14 @@ Model <- R6Class(
 
     is_stratified = function() {
       length(private$.index_sets) > 0
+    },
+
+    parameter_dimensions = function() {
+      private$.parameter_dimensions
+    },
+
+    compartment_dimensions = function() {
+      private$.compartment_dimensions
     }
   ),
   

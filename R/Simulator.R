@@ -117,8 +117,14 @@ Simulator <- R6Class(
     # model compartments (character vector)
     compartments = NULL,
 
+    # indexed compartment dimensions used to flatten structured y0
+    compartment_dimensions = NULL,
+
     # model parameters (character vector)
     parameters = NULL,
+
+    # indexed parameter dimensions used to validate positional strata indexing
+    parameter_dimensions = NULL,
 
     # model substitutions represented as assignment calls (dependency-sorted)
     alias = NULL,
@@ -208,6 +214,112 @@ Simulator <- R6Class(
       }
 
       data
+    },
+
+    validate_parameter_strata = function(parms) {
+      if (length(private$parameter_dimensions) == 0) return()
+
+      for (parameter in names(private$parameter_dimensions)) {
+        dims <- private$parameter_dimensions[[parameter]]
+        value <- parms[[parameter]]
+        expected_rank <- length(dims)
+
+        if (expected_rank == 1) {
+          if (is.null(dim(value)) && !(length(value) %in% c(1, length(dims[[1]]))))
+            stop("parameter ", parameter, " length must be 1 or match model strata")
+          actual <- if (is.null(dim(value))) names(value) else dimnames(value)[[1]]
+          private$validate_strata_names(parameter, 1, actual, dims[[1]], require_names = FALSE)
+        } else {
+          actual_dim <- dim(value)
+          if (is.null(actual_dim) || length(actual_dim) < expected_rank)
+            stop("parameter ", parameter, " must have ", expected_rank, " dimensions")
+          expected_dim <- vapply(dims, length, integer(1))
+          if (!identical(as.integer(actual_dim[seq_len(expected_rank)]), expected_dim))
+            stop("parameter ", parameter, " dimensions must match model strata")
+
+          actual_dimnames <- dimnames(value)
+          if (!is.null(actual_dimnames) && length(actual_dimnames) >= expected_rank) {
+            for (i in seq_len(expected_rank)) {
+              private$validate_strata_names(parameter, i, actual_dimnames[[i]], dims[[i]], require_names = FALSE)
+            }
+          }
+        }
+      }
+    },
+
+    validate_strata_names = function(parameter, dimension, actual, expected, require_names = TRUE) {
+      if (is.null(actual)) {
+        if (!require_names) return()
+        stop(
+          "parameter ", parameter, " dimension ", dimension,
+          " must be named for positional stratified indexing"
+        )
+      }
+      if (!identical(as.character(actual), as.character(expected))) {
+        stop(
+          "parameter ", parameter, " dimension ", dimension,
+          " names must be in model strata order: ",
+          paste(expected, collapse = ", ")
+        )
+      }
+    },
+
+    flatten_initial_values = function(y0) {
+      if (!is.list(y0) || is.data.frame(y0)) return(y0)
+
+      ny <- names(y0)
+      if (is.null(ny) || any(ny == ""))
+        stop("structured y0 must be a named list")
+
+      out <- numeric()
+      for (name in ny) {
+        dims <- private$compartment_dimensions[[name]]
+        value <- y0[[name]]
+
+        if (is.null(dims)) {
+          if (length(value) != 1)
+            stop("initial value ", name, " is not a stratified compartment")
+          out[[name]] <- value
+        } else {
+          out <- c(out, private$flatten_stratified_initial_value(name, value, dims))
+        }
+      }
+      out
+    },
+
+    flatten_stratified_initial_value = function(name, value, dims) {
+      expected_rank <- length(dims)
+      if (expected_rank == 1) {
+        private$validate_strata_names(name, 1, names(value), dims[[1]])
+        out <- as.numeric(value[dims[[1]]])
+        names(out) <- vapply(dims[[1]], function(v) strata_flat_name(name, v), character(1))
+        return(out)
+      }
+
+      actual_dim <- dim(value)
+      if (is.null(actual_dim) || length(actual_dim) < expected_rank)
+        stop("initial value ", name, " must have ", expected_rank, " dimensions")
+
+      expected_dim <- vapply(dims, length, integer(1))
+      if (!identical(as.integer(actual_dim[seq_len(expected_rank)]), expected_dim))
+        stop("initial value ", name, " dimensions must match model strata")
+
+      actual_dimnames <- dimnames(value)
+      if (is.null(actual_dimnames) || length(actual_dimnames) < expected_rank)
+        stop("initial value ", name, " must have dimnames")
+      for (i in seq_len(expected_rank))
+        private$validate_strata_names(name, i, actual_dimnames[[i]], dims[[i]])
+
+      grid <- expand.grid(dims, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+      out <- vapply(seq_len(nrow(grid)), function(row) {
+        key <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
+        do.call("[", c(list(value), as.list(key)))
+      }, numeric(1))
+      names(out) <- vapply(seq_len(nrow(grid)), function(row) {
+        key <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
+        strata_flat_name(name, key)
+      }, character(1))
+      out
     }
   ),
 
@@ -227,7 +339,9 @@ Simulator <- R6Class(
       }
 
       private$compartments <- model$flat_compartments()
+      private$compartment_dimensions <- model$compartment_dimensions()
       private$parameters <- model$flat_parameters()
+      private$parameter_dimensions <- model$parameter_dimensions()
 
       subst <- model$substitutions
       private$alias <- list()
@@ -251,6 +365,9 @@ Simulator <- R6Class(
     },
 
     simulate = function(t, y0, parms = NULL, vars = names(y0), ...) {
+      y0 <- private$flatten_initial_values(y0)
+      if (is.null(vars)) vars <- names(y0)
+
       ny <- names(y0)
       if (is.null(ny) || any(ny == ""))
         stop("y0 must be named")
@@ -282,6 +399,8 @@ Simulator <- R6Class(
         extra <- setdiff(np, private$parameters)
         if (length(extra) > 0)
           stop("extra parameter values for ", paste(extra, collapse = ", "))
+
+        private$validate_parameter_strata(parms)
       }
 
       data <- private$.simulate(t, y0, parms, ...)

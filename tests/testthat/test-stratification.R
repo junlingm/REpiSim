@@ -14,6 +14,9 @@ test_that("Model keeps indexed equations and exposes flat equations", {
 
   flat <- model$flat_equations()$equations
   expect_named(flat, c("S_A", "S_K", "I_A", "I_K"))
+  positional <- model$flat_equations(index_mode = "position")$equations
+  expect_match(deparse1(positional$S_A[[3]]), 'beta\\[1L, 1L\\]')
+  expect_match(deparse1(positional$S_A[[3]]), 'beta\\[1L, 2L\\]')
 
   beta <- matrix(
     c(0.4, 0.2,
@@ -89,6 +92,73 @@ test_that("ODE R backend simulates stratified models with structured parameters"
 
   expect_s3_class(out, "data.frame")
   expect_named(out, c("time", "S_A", "S_K", "I_A", "I_K"))
+
+  ode_body <- deparse1(body(ODE$new(model)$model))
+  expect_match(ode_body, "beta\\[1L, 1L\\]")
+  expect_no_match(ode_body, 'beta\\["A", "A"\\]')
+})
+
+test_that("positional simulator indexing validates parameter strata order", {
+  skip_if_not_installed("deSolve")
+
+  groups <- c("A", "K")
+  model <- Model$new(
+    S[i] ~ -Sum(beta[i, j] * I[j], j = groups) * S[i],
+    I[i] ~ Sum(beta[i, j] * I[j], j = groups) * S[i] - gamma[i] * I[i],
+    .index = list(i = groups, j = groups)
+  )
+
+  beta <- matrix(
+    c(0.4, 0.2,
+      0.3, 0.6),
+    nrow = 2,
+    byrow = TRUE,
+    dimnames = list(groups, groups)
+  )
+  gamma <- c(A = 0.2, K = 0.25)
+  y0 <- c(S_A = 500, S_K = 500, I_A = 1, I_K = 1)
+
+  beta_bad <- beta
+  dimnames(beta_bad)[[1]] <- rev(groups)
+  expect_error(
+    ODE$new(model)$simulate(0:1, y0 = y0, parms = list(beta = beta_bad, gamma = gamma)),
+    "parameter beta dimension 1 names must be in model strata order"
+  )
+
+  gamma_bad <- gamma[rev(groups)]
+  expect_error(
+    ODE$new(model)$simulate(0:1, y0 = y0, parms = list(beta = beta, gamma = gamma_bad)),
+    "parameter gamma dimension 1 names must be in model strata order"
+  )
+})
+
+test_that("ODE accepts structured initial values and vector parameters", {
+  skip_if_not_installed("deSolve")
+
+  groups <- c("A", "K")
+  model <- Model$new(
+    S[i] ~ -Sum(beta[i, j] * I[j], j = groups) * S[i],
+    I[i] ~ Sum(beta[i, j] * I[j], j = groups) * S[i] - gamma * I[i],
+    i = groups
+  )
+
+  sim <- ODE$new(model)
+  t <- seq(0, 1, by = 0.1)
+  y0 <- list(
+    S = c(A = 0.5, K = 0.5),
+    I = c(A = 1e-4, K = 1e-4)
+  )
+  beta <- matrix(c(2, 1.5, 1.5, 2), nrow = 2)
+  gamma <- c(A = 0.2, K = 0.2)
+
+  out <- sim$simulate(t, y0 = y0, parms = list(beta = beta, gamma = gamma))
+
+  expect_s3_class(out, "data.frame")
+  expect_named(out, c("time", "S_A", "S_K", "I_A", "I_K"))
+
+  body_text <- deparse1(body(sim$model))
+  expect_match(body_text, "gamma\\[\\[min\\(length\\(gamma\\), 1L\\)\\]\\]")
+  expect_match(body_text, "gamma\\[\\[min\\(length\\(gamma\\), 2L\\)\\]\\]")
 })
 
 test_that("compiled ODE reports stratification as unsupported for now", {

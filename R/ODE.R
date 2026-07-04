@@ -54,7 +54,7 @@ void REpiSimSetup(cpp11::environment functions)
     # Compile model -> deSolve function(time, y, parms)
     # --------------------------------------------------------------------------
     build = function(model) {
-      system <- model$flat_equations()
+      system <- model$flat_equations(index_mode = "position")
       
       # Derivative variable names: ".d.S", ".d.I", ...
       der <- lapply(names(system$equations), function(var) as.name(paste0(".d.", var)))
@@ -92,7 +92,7 @@ void REpiSimSetup(cpp11::environment functions)
 
     build_rhs_cpp = function(model) {
       cpp <- CppConverter$new(private$compartments, private$parameters, private$alias)
-      system <- model$flat_equations()
+      system <- model$flat_equations(index_mode = "position")
 
       n_der <- length(system$equations)
       n_extra <- length(private$alias)
