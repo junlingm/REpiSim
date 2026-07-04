@@ -42,6 +42,8 @@ Bayesian <- R6::R6Class(
     #' @param guess Named numeric vector of initial guesses for all fitted quantities.
     #' @param ... Extra arguments forwarded to subclass calibrators (e.g., MCMC control).
     calibrate = function(initial.values, parms, priors, guess, ...) {
+      guess <- private$normalize_guess(guess)
+
       # guess must be named
       ng <- names(guess)
       if (is.null(ng) || any(ng == ""))

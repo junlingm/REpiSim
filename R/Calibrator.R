@@ -64,6 +64,10 @@ Calibrator <- R6::R6Class(
     .time = NULL,
     #' @field .details Raw output returned by the subclass algorithm
     .details = NULL,
+    #' @field .compartment_dimensions Stratified compartment dimensions
+    .compartment_dimensions = list(),
+    #' @field .parameter_dimensions Stratified parameter dimensions
+    .parameter_dimensions = list(),
     
     # ------------------------------------------------------------------------
     # Hooks for subclasses
@@ -95,7 +99,7 @@ Calibrator <- R6::R6Class(
       }
       
       ic <- unlist(all[private$.model$compartments])
-      par <- all[private$.model$parameters]
+      par <- private$reconstruct_parameters(all)
       vars <- unlist(private$.mapping)
       
       sim <- private$.simulator$simulate(private$.time, ic, par, vars = vars, ...)
@@ -127,7 +131,8 @@ Calibrator <- R6::R6Class(
     #' @param mode One of "initial.value" or "parameter".
     split = function(x, mode = c("initial.value", "parameter")) {
       mode <- match.arg(mode)
-      set <- if (mode == "initial.value") private$.model$compartments else private$.model$parameters
+      x <- private$normalize_calibration_values(x, mode)
+      set <- if (mode == "initial.value") private$.model$compartments else private$calibration_parameters()
       
       if (length(x) == 0) return(list(value = NULL, formula = NULL, fit = set))
       
@@ -138,7 +143,11 @@ Calibrator <- R6::R6Class(
       if (length(extra) > 0) stop(paste(extra, collapse = ", "), " not defined in the model")
       
       idx.formula <- vapply(x, calibrator.is.formula, logical(1))
-      idx.values <- vapply(seq_along(x), function(i) is.numeric(x[[i]]) && !idx.formula[[i]], logical(1))
+      idx.values <- vapply(
+        seq_along(x),
+        function(i) is.numeric(x[[i]]) && !idx.formula[[i]] && !calibrator.is.missing(x[[i]]),
+        logical(1)
+      )
       
       x.values <- as.list(x[idx.values])
       x.formula <- lapply(x[idx.formula], calibrator.as.expression)
@@ -167,6 +176,7 @@ Calibrator <- R6::R6Class(
       fit <- c(extra, ic$fit, p$fit)
       if (length(fit) == 0) stop("no initial values or parameters to fit")
       
+      guess <- private$normalize_guess(guess)
       if (!is.numeric(guess) || any(is.na(guess))) stop("invalid initial values")
       
       ng <- names(guess)
@@ -182,6 +192,137 @@ Calibrator <- R6::R6Class(
       
       fixed <- c(ic$value, p$value)
       c(list(guess = guess, formula = formula, fixed = fixed), list(...))
+    },
+
+    calibration_parameters = function() {
+      params <- private$.model$parameters
+      expanded <- unlist(
+        lapply(names(private$.parameter_dimensions), function(parameter) {
+          private$flat_dimension_names(parameter, private$.parameter_dimensions[[parameter]])
+        }),
+        use.names = FALSE
+      )
+      c(setdiff(params, names(private$.parameter_dimensions)), expanded)
+    },
+
+    normalize_calibration_values = function(x, mode = c("initial.value", "parameter")) {
+      mode <- match.arg(mode)
+      if (length(x) == 0) return(x)
+
+      if (!is.list(x) || is.data.frame(x)) x <- as.list(x)
+      ns <- names(x)
+      if (is.null(ns) || any(ns == "")) return(x)
+
+      out <- list()
+      for (name in ns) {
+        value <- x[[name]]
+        dims <- if (mode == "initial.value") {
+          private$.compartment_dimensions[[name]]
+        } else {
+          private$.parameter_dimensions[[name]]
+        }
+
+        if (is.null(dims)) {
+          out[[name]] <- value
+        } else {
+          out <- c(out, private$flatten_dimensioned_value(name, value, dims, mode))
+        }
+      }
+      out
+    },
+
+    normalize_guess = function(guess) {
+      if (length(guess) == 0) return(guess)
+      if (!is.list(guess) || is.data.frame(guess)) guess <- as.list(guess)
+
+      ns <- names(guess)
+      if (is.null(ns) || any(ns == "")) return(unlist(guess))
+
+      out <- list()
+      for (name in ns) {
+        value <- guess[[name]]
+        if (!is.null(private$.compartment_dimensions[[name]])) {
+          out <- c(out, private$flatten_dimensioned_value(
+            name, value, private$.compartment_dimensions[[name]], "guess"
+          ))
+        } else if (!is.null(private$.parameter_dimensions[[name]])) {
+          out <- c(out, private$flatten_dimensioned_value(
+            name, value, private$.parameter_dimensions[[name]], "guess"
+          ))
+        } else {
+          out[[name]] <- value
+        }
+      }
+      out <- out[!vapply(out, calibrator.is.missing, logical(1))]
+      unlist(out)
+    },
+
+    flatten_dimensioned_value = function(name, value, dims, mode) {
+      if (length(dims) == 1 && is.null(dim(value))) {
+        if (!(length(value) %in% c(1, length(dims[[1]]))))
+          stop(mode, " ", name, " length must be 1 or match model strata")
+        if (identical(mode, "guess") && !is.null(names(value)) &&
+            all(as.character(names(value)) %in% as.character(dims[[1]]))) {
+          values <- as.list(value)
+          names(values) <- vapply(names(value), function(v) strata_flat_name(name, v), character(1))
+          return(values)
+        }
+        if (!is.null(names(value)) && !identical(as.character(names(value)), as.character(dims[[1]])))
+          stop(mode, " ", name, " names must be in model strata order: ", paste(dims[[1]], collapse = ", "))
+
+        values <- if (length(value) == 1) rep(value, length(dims[[1]])) else as.list(value)
+        names(values) <- private$flat_dimension_names(name, dims)
+        return(values)
+      }
+
+      actual_dim <- dim(value)
+      if (is.null(actual_dim) || length(actual_dim) < length(dims))
+        stop(mode, " ", name, " must have ", length(dims), " dimensions")
+
+      expected_dim <- vapply(dims, length, integer(1))
+      if (!identical(as.integer(actual_dim[seq_along(dims)]), expected_dim))
+        stop(mode, " ", name, " dimensions must match model strata")
+
+      actual_dimnames <- dimnames(value)
+      if (!is.null(actual_dimnames) && length(actual_dimnames) >= length(dims)) {
+        for (i in seq_along(dims)) {
+          dn <- actual_dimnames[[i]]
+          if (!is.null(dn) && !identical(as.character(dn), as.character(dims[[i]])))
+            stop(mode, " ", name, " dimension ", i, " names must be in model strata order: ",
+                 paste(dims[[i]], collapse = ", "))
+        }
+      }
+
+      flat_names <- private$flat_dimension_names(name, dims)
+      values <- as.list(as.vector(value))
+      names(values) <- flat_names
+      values
+    },
+
+    flat_dimension_names = function(name, dims) {
+      grid <- expand.grid(dims, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+      vapply(seq_len(nrow(grid)), function(row) {
+        key <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
+        strata_flat_name(name, key)
+      }, character(1))
+    },
+
+    reconstruct_parameters = function(all) {
+      lapply(private$.model$parameters, function(parameter) {
+        dims <- private$.parameter_dimensions[[parameter]]
+        if (is.null(dims)) return(all[[parameter]])
+
+        flat_names <- private$flat_dimension_names(parameter, dims)
+        values <- unlist(all[flat_names], use.names = FALSE)
+        if (length(values) == length(flat_names) && !any(is.na(values))) {
+          out <- array(values, dim = vapply(dims, length, integer(1)), dimnames = dims)
+          if (length(dims) == 1) out <- as.vector(out)
+          names(out) <- if (length(dims) == 1) dims[[1]] else names(out)
+          return(out)
+        }
+
+        all[[parameter]]
+      }) |> stats::setNames(private$.model$parameters)
     }
   ),
   
@@ -268,6 +409,8 @@ Calibrator <- R6::R6Class(
       }
       
       private$.model <- m
+      private$.compartment_dimensions <- m$compartment_dimensions()
+      private$.parameter_dimensions <- m$parameter_dimensions()
       private$.simulator <- private$simulator(m)
       
       # PATCH: always keep observation data as a data.frame
