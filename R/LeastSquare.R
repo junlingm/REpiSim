@@ -11,7 +11,7 @@ LeastSquare <- R6::R6Class(
     .log = FALSE,
 
     simulator = function(model) {
-      ODE$new(model)
+      ODE$new(model, compile = private$.compile)
     },
     
     objective = function(pars, formula, fixed, ...) {
@@ -71,9 +71,9 @@ LeastSquare <- R6::R6Class(
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
-    initialize = function(model, time, data, ..., log=FALSE, cumulative=FALSE, mapping=character()) {
+    initialize = function(model, time, data, ..., log=FALSE, cumulative=FALSE, mapping=character(), compile=FALSE) {
       private$.log = log
-      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
+      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping, compile = compile)
       if (log) private$.data = base::log(private$.data)
     }
   )

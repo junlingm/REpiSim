@@ -26,7 +26,7 @@ Bayesian <- R6::R6Class(
     # Default simulator for Bayesian calibration is numerical ODE integration.
     # Subclasses can override by redefining private$simulator(model).
     simulator = function(model) {
-      ODE$new(model)
+      ODE$new(model, compile = private$.compile)
     }
   ),
   

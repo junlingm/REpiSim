@@ -34,7 +34,7 @@ MLE <- R6Class(
     },
     
     simulator = function(model) {
-      ODE$new(model)
+      ODE$new(model, compile = private$.compile)
     },
     
     .calibrate = function(guess, formula, fixed, ...) {
@@ -156,7 +156,7 @@ MLE <- R6Class(
     #' A mapping is a named argument, where name is the
     #' data colummn name, and value corresponds to the model variables (or an 
     #' expression to calculate from the model variables.)
-    initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character(), CI=TRUE) {
+    initialize = function(model, time, data, likelihood, ..., cumulative=FALSE, mapping=character(), CI=TRUE, compile=FALSE) {
       if (!requireNamespace("bbmle", quietly = TRUE))
         stop("bbmle package is required for MLE calibration")
       if (!"Distribution" %in% class(likelihood) || is.null(likelihood$log.likelihood))
@@ -164,7 +164,7 @@ MLE <- R6Class(
       private$.likelihood = likelihood
       private$.par.likelihood = likelihood$parameters
       private$.CI = CI
-      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
+      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping, compile = compile)
     }
   ),
   

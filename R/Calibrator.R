@@ -56,6 +56,8 @@ Calibrator <- R6::R6Class(
     .model = NULL,
     #' @field .cumulative Whether observed data are cumulative counts/curves
     .cumulative = FALSE,
+    #' @field .compile Whether default simulators should use compiled backends
+    .compile = FALSE,
     #' @field .mapping Named character vector mapping data columns -> model variables
     .mapping = NULL,
     #' @field .time Numeric vector of times used for simulation
@@ -202,9 +204,10 @@ Calibrator <- R6::R6Class(
     #'
     #' When the RHS of a mapping formula is an expression, the expression is added as a
     #' substitution to the internal model clone so it can be simulated like other variables.
-    initialize = function(model, time, data, ..., cumulative = FALSE, mapping = character()) {
+    initialize = function(model, time, data, ..., cumulative = FALSE, mapping = character(), compile = FALSE) {
       m <- model$clone(deep = TRUE)
       if (!is.data.frame(data)) stop("data must be a data.frame object")
+      private$.compile <- isTRUE(compile)
       
       if (length(mapping) > 0) {
         extra_cols <- setdiff(names(mapping), colnames(data))

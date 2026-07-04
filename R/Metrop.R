@@ -184,12 +184,12 @@ Metrop <- R6::R6Class(
     #' @param ... Mapping formulas (e.g., `cases ~ I`).
     #' @param cumulative Whether `data` represents cumulative curves.
     #' @param mapping Optional named character vector mapping data columns to model variables.
-    initialize = function(model, time, data, likelihood, ..., cumulative = FALSE, mapping = character()) {
+    initialize = function(model, time, data, likelihood, ..., cumulative = FALSE, mapping = character(), compile = FALSE) {
       if (!inherits(likelihood, "Distribution"))
         stop("likelihood must be a Distribution object")
       private$.likelihood <- likelihood
       private$.par.likelihood <- likelihood$parameters
-      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping)
+      super$initialize(model, time, data, ..., cumulative = cumulative, mapping = mapping, compile = compile)
     }
   ),
   

@@ -251,6 +251,9 @@ fit$calibrate(
 
 In `initial.values` and `parms`, numeric values are fixed. Omitted values are fitted. Thus, in the example above, `S(0)` is fixed at 10 and `a` is estimated.
 
+Set `compile = TRUE` in `MLE`, `Metrop`, or `LeastSquare` to use the compiled
+ODE backend during calibration.
+
 ### Fitting transformed parameters
 
 Parameters may also be supplied as quoted expressions. This is useful for enforcing constraints. For example, to estimate an unconstrained parameter `b` while forcing `a > 0`, write:
