@@ -24,6 +24,44 @@ test_that("Compartmental expands stratified transitions into flat events", {
   expect_match(deparse1(infection_a$rate), "S_A")
 })
 
+test_that("Compartmental supports transition-local endpoint indices", {
+  groups <- c("A", "K")
+  model <- Compartmental$new()
+
+  model$transition(
+    I[i] <- S[i] ~ Sum(beta[i, j] * I[j], j = groups) * S[i],
+    i = groups,
+    name = "infection"
+  )
+
+  expect_equal(model$compartments, c("S_A", "I_A", "S_K", "I_K"))
+  expect_named(model$transitions, c("infection_A", "infection_K"))
+  expect_null(model$substitutions$i)
+  expect_equal(model$compartment_dimensions()$S, list(groups))
+  expect_equal(model$compartment_dimensions()$I, list(groups))
+  expect_equal(model$parameter_dimensions()$beta, list(groups, groups))
+
+  infection_a <- model$transitions$infection_A
+  expect_equal(infection_a$from, "S_A")
+  expect_equal(infection_a$to, "I_A")
+  expect_match(deparse1(infection_a$rate), "beta\\[1L, 1L\\]")
+  expect_match(deparse1(infection_a$rate), "S_A")
+})
+
+test_that("Compartmental requires endpoint indices to be specified", {
+  groups <- c("A", "K")
+  model <- Compartmental$new()
+
+  expect_error(
+    model$transition(
+      I[i] <- S[i] ~ Sum(beta[i, j] * I[j], j = groups) * S[i],
+      name = "infection"
+    ),
+    "index i must be specified for this transition",
+    fixed = TRUE
+  )
+})
+
 test_that("ODE simulates stratified Compartmental models with structured inputs", {
   skip_if_not_installed("deSolve")
 

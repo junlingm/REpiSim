@@ -399,30 +399,43 @@ Compartmental <- R6Class(
     #' - Outputs: `X -> NULL` (entered as `NULL <- X ~ rate` when using `formula`).
     #' - Per-capita rate can be specified as `percapita(expr)` or `percapita=TRUE`.
     transition = function(formula = NULL, ..., from = NULL, to = NULL, rate = NULL, percapita = FALSE, name = NULL) {
+      call_env = parent.frame()
       formula = substitute(formula)
       where = as.list(substitute(list(...)))[-1]
 
-      if (!is.null(formula) && length(private$.index_sets) > 0) {
+      index_sets <- private$.index_sets
+      if (!is.null(formula)) {
+        index_info <- strata_extract_transition_index_args(
+          formula,
+          where,
+          call_env,
+          private$.index_sets
+        )
+        where <- index_info$args
+        index_sets <- index_info$index_sets
+      }
+
+      if (!is.null(formula) && length(index_sets) > 0) {
         private$.compartment_dimensions <-
           strata_collect_transition_compartment_dimensions(
             formula,
-            private$.index_sets,
+            index_sets,
             private$.compartment_dimensions
           )
         private$.parameter_dimensions <-
           strata_collect_transition_parameter_dimensions(
             formula,
-            private$.index_sets,
+            index_sets,
             private$.compartment_dimensions,
-            private$.index_env,
+            call_env,
             private$.parameter_dimensions
           )
 
         expanded <- strata_expand_transition_formula(
           formula,
-          private$.index_sets,
+          index_sets,
           private$.compartment_dimensions,
-          private$.index_env,
+          call_env,
           index_mode = "position"
         )
 

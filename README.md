@@ -231,20 +231,28 @@ The model-level equations remain readable in indexed form, while simulators rece
 The same model can be written as stratified transitions:
 
 ```r
-m <- Compartmental$new(.index = list(i = groups, j = groups))
+m <- Compartmental$new()
 
 m$transition(
   I[i] <- S[i] ~ Sum(beta[i, j] * I[j], j = groups),
+  i = groups,
   percapita = TRUE,
   name = "infection"
 )
 
 m$transition(
   R[i] <- I[i] ~ gamma[i],
+  i = groups,
   percapita = TRUE,
   name = "recovery"
 )
 ```
+
+Here `i = groups` is local to the transition call: it says which strata of
+`S[i]`, `I[i]`, or `R[i]` are covered by that transition. It is not stored as a
+global model index. If an indexed transition endpoint uses `i`, the transition
+call must provide `i = ...` unless the index was already declared globally.
+Reduction indices such as `j` can be bound directly inside `Sum()` or `Prod()`.
 
 This creates separate flat event transitions, such as `infection_A`, `infection_K`, `recovery_A`, and `recovery_K`. That preserves the event structure needed by `Gillespie`.
 

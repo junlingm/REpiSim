@@ -48,6 +48,52 @@ strata_formula_lhs_indices <- function(args) {
   indices
 }
 
+strata_transition_endpoint_indices <- function(formula) {
+  endpoints <- strata_transition_endpoints(formula)
+  indices <- character(0)
+
+  for (endpoint in endpoints) {
+    if (!strata_is_indexed_call(endpoint)) next
+    endpoint_indices <- vapply(as.list(endpoint)[-(1:2)], function(index) {
+      if (!is.name(index)) stop("compartment indices must be symbols")
+      as.character(index)
+    }, character(1))
+    indices <- union(indices, endpoint_indices)
+  }
+
+  indices
+}
+
+strata_extract_transition_index_args <- function(formula, args, env, global_index_sets = list()) {
+  ns <- names(args)
+  if (is.null(ns)) ns <- rep("", length(args))
+
+  endpoint_indices <- strata_transition_endpoint_indices(formula)
+  local_index_args <- which(ns %in% endpoint_indices)
+  local_index_sets <- list()
+
+  for (i in local_index_args) {
+    index_name <- ns[[i]]
+    if (!is.null(local_index_sets[[index_name]]))
+      stop("index ", index_name, " specified more than once")
+    local_index_sets[[index_name]] <- as.character(strata_eval(args[[i]], env))
+  }
+
+  if (length(local_index_args) > 0) args <- args[-local_index_args]
+
+  index_sets <- global_index_sets
+  for (index_name in names(local_index_sets)) {
+    index_sets[[index_name]] <- local_index_sets[[index_name]]
+  }
+
+  for (index_name in endpoint_indices) {
+    if (is.null(index_sets[[index_name]]))
+      stop("index ", index_name, " must be specified for this transition")
+  }
+
+  list(args = args, index_sets = index_sets)
+}
+
 strata_is_indexed_call <- function(expr) {
   is.call(expr) && identical(expr[[1]], as.name("[")) && length(expr) >= 3 &&
     is.name(expr[[2]])
