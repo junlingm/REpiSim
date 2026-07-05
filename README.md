@@ -99,27 +99,35 @@ REpiSim provides the `Compartmental` class for this purpose. The `Compartmental`
 
 ### Defining compartments
 
-Compartments (state variables) are declared when creating the model:
+Compartments (state variables) may be declared when creating the model:
 
 ```r
 m <- Compartmental$new(S, I, R)
 ```
 
-This declares `S`, `I`, and `R` as state variables, with their derivatives initially set to zero.
+This declares `S`, `I`, and `R` as state variables, with their derivatives initially set to zero. Explicit declarations are useful when you want to control output order or include a compartment before adding transitions.
+
+Compartment declarations are optional. If a transition mentions a compartment that has not yet been declared, it is added automatically:
+
+```r
+m <- Compartmental$new()
+m$transition(I <- S ~ beta*S*I/N, N = S + I + R)
+m$transition(R <- I ~ gamma, percapita = TRUE)
+```
 
 ### Adding transitions
 
 Transitions are added using the `transition()` method. A transition has the general form:
 
 ```r
-from -> to ~ rate
+to <- from ~ rate
 ```
 
 A standard SIR model can be written as:
 
 ```r
-m$transition(S -> I ~ beta*S*I/N, N = S + I + R)
-m$transition(I -> R ~ gamma*I)
+m$transition(I <- S ~ beta*S*I/N, N = S + I + R)
+m$transition(R <- I ~ gamma*I)
 ```
 
 This corresponds to the ODE system
@@ -140,11 +148,11 @@ Births, deaths, or other external flows can be modeled using `NULL` as the sourc
 
 - Births into a compartment:
   ```r
-  m$transition(NULL -> S ~ mu)
+  m$transition(S <- NULL ~ mu)
   ```
 - Deaths from a compartment:
   ```r
-  m$transition(I -> NULL ~ mu*I)
+  m$transition(NULL <- I ~ mu*I)
   ```
 
 ### Per-capita transition rates
@@ -198,6 +206,134 @@ optional cpp11 backend.
 
 - Use **`Model`** when you want full control over the differential equations or are working with non-compartmental systems.
 - Use **`Compartmental`** when your model is naturally described by transitions between states; this approach is often more concise and less error-prone.
+
+---
+
+## Stratified models
+
+REpiSim supports stratified state variables in both `Model` and `Compartmental`. A stratified compartment is written using indexed notation such as `S[i]`, where the index values are supplied by an index set.
+
+For example, a two-group SIR model can be written directly as ODE equations:
+
+```r
+groups <- c("A", "K")
+
+m <- Model$new(
+  S[i] ~ -Sum(beta[i, j] * I[j], j = groups) * S[i],
+  I[i] ~  Sum(beta[i, j] * I[j], j = groups) * S[i] - gamma[i] * I[i],
+  R[i] ~  gamma[i] * I[i],
+  .index = list(i = groups, j = groups)
+)
+```
+
+The model-level equations remain readable in indexed form, while simulators receive a flat internal representation with variables such as `S_A`, `S_K`, `I_A`, and `I_K`.
+
+The same model can be written as stratified transitions:
+
+```r
+m <- Compartmental$new(.index = list(i = groups, j = groups))
+
+m$transition(
+  I[i] <- S[i] ~ Sum(beta[i, j] * I[j], j = groups),
+  percapita = TRUE,
+  name = "infection"
+)
+
+m$transition(
+  R[i] <- I[i] ~ gamma[i],
+  percapita = TRUE,
+  name = "recovery"
+)
+```
+
+This creates separate flat event transitions, such as `infection_A`, `infection_K`, `recovery_A`, and `recovery_K`. That preserves the event structure needed by `Gillespie`.
+
+### Initial values and parameters
+
+Initial values may be supplied either in flat form:
+
+```r
+y0 <- c(
+  S_A = 0.5, S_K = 0.5,
+  I_A = 1e-4, I_K = 1e-4,
+  R_A = 0, R_K = 0
+)
+```
+
+or as a structured list:
+
+```r
+y0 <- list(
+  S = c(A = 0.5, K = 0.5),
+  I = c(A = 1e-4, K = 1e-4),
+  R = c(A = 0, K = 0)
+)
+```
+
+Parameters may also be structured:
+
+```r
+beta <- matrix(
+  c(2.0, 1.5,
+    1.5, 2.0),
+  nrow = 2,
+  byrow = TRUE,
+  dimnames = list(groups, groups)
+)
+
+parms <- list(
+  beta = beta,
+  gamma = c(A = 0.2, K = 0.2)
+)
+```
+
+Then simulate as usual:
+
+```r
+sim <- ODE$new(m)
+x <- sim$simulate(
+  t = seq(0, 50, by = 0.1),
+  y0 = y0,
+  parms = parms
+)
+```
+
+The simulation output is always a data frame with flat variable columns.
+
+For performance, simulator functions use integer indexing into structured parameters. When names or dimnames are present, REpiSim checks that they are in the model's stratum order before simulation.
+
+### Calibration with stratified models
+
+Calibration accepts the same flat and structured forms for `initial.values`, `parms`, and `guess`.
+
+For example, fixed and fitted values can be mixed using `NA` placeholders:
+
+```r
+fit$calibrate(
+  initial.values = list(
+    S = c(A = 0.5, K = 0.5),
+    I = c(A = NA, K = 1e-4)
+  ),
+  parms = list(
+    beta = matrix(c(1.5, NA, NA, 2.0), nrow = 2),
+    gamma = c(A = 0.2, K = 0.2)
+  ),
+  guess = list(
+    I = c(A = 1e-4),
+    beta = matrix(c(NA, 1.6, 1.7, NA), nrow = 2)
+  )
+)
+```
+
+Equivalently, flat component names can be used:
+
+```r
+fit$calibrate(
+  initial.values = c(S_A = 0.5, S_K = 0.5, I_A = 1e-4, I_K = 1e-4),
+  parms = list(beta_A_A = 1.5, beta_K_K = 2.0, gamma_A = 0.2, gamma_K = 0.2),
+  guess = c(beta_K_A = 1.6, beta_A_K = 1.7)
+)
+```
 
 ---
 
