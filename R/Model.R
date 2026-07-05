@@ -563,6 +563,7 @@ Model <- R6Class(
           index_sets = private$.index_sets,
           compartment_dimensions = private$.compartment_dimensions,
           env = private$.index_env,
+          parameter_dimensions = if (index_mode == "position") private$.parameter_dimensions else list(),
           index_mode = index_mode
         ),
         recursive = FALSE
@@ -588,7 +589,13 @@ Model <- R6Class(
     },
 
     flat_parameters = function() {
-      self$parameters
+      expanded <- unlist(
+        lapply(names(private$.parameter_dimensions), function(parameter) {
+          strata_flat_dimension_names(parameter, private$.parameter_dimensions[[parameter]])
+        }),
+        use.names = FALSE
+      )
+      c(setdiff(self$parameters, c(names(private$.parameter_dimensions), expanded)), expanded)
     },
 
     is_stratified = function() {

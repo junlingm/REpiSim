@@ -20,7 +20,7 @@ test_that("Compartmental expands stratified transitions into flat events", {
   infection_a <- model$transitions$infection_A
   expect_equal(infection_a$from, "S_A")
   expect_equal(infection_a$to, "I_A")
-  expect_match(deparse1(infection_a$rate), "beta\\[1L, 1L\\]")
+  expect_match(deparse1(infection_a$rate), "beta_A_A")
   expect_match(deparse1(infection_a$rate), "S_A")
 })
 
@@ -44,8 +44,20 @@ test_that("Compartmental supports transition-local endpoint indices", {
   infection_a <- model$transitions$infection_A
   expect_equal(infection_a$from, "S_A")
   expect_equal(infection_a$to, "I_A")
-  expect_match(deparse1(infection_a$rate), "beta\\[1L, 1L\\]")
+  expect_match(deparse1(infection_a$rate), "beta_A_A")
   expect_match(deparse1(infection_a$rate), "S_A")
+})
+
+test_that("bare parameters in stratified transitions remain scalar", {
+  groups <- c("A", "K")
+  model <- Compartmental$new()
+
+  model$transition(R[i] <- I[i] ~ gamma * I[i], i = groups)
+
+  expect_equal(model$parameter_dimensions(), list())
+  expect_equal(model$parameters, "gamma")
+  expect_equal(model$flat_parameters(), "gamma")
+  expect_match(deparse1(model$transitions[["I_A->R_A"]]$rate), "gamma \\* I_A")
 })
 
 test_that("Compartmental requires endpoint indices to be specified", {

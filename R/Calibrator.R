@@ -198,11 +198,11 @@ Calibrator <- R6::R6Class(
       params <- private$.model$parameters
       expanded <- unlist(
         lapply(names(private$.parameter_dimensions), function(parameter) {
-          private$flat_dimension_names(parameter, private$.parameter_dimensions[[parameter]])
+          strata_flat_dimension_names(parameter, private$.parameter_dimensions[[parameter]])
         }),
         use.names = FALSE
       )
-      c(setdiff(params, names(private$.parameter_dimensions)), expanded)
+      c(setdiff(params, c(names(private$.parameter_dimensions), expanded)), expanded)
     },
 
     normalize_calibration_values = function(x, mode = c("initial.value", "parameter")) {
@@ -300,11 +300,7 @@ Calibrator <- R6::R6Class(
     },
 
     flat_dimension_names = function(name, dims) {
-      grid <- expand.grid(dims, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
-      vapply(seq_len(nrow(grid)), function(row) {
-        key <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
-        strata_flat_name(name, key)
-      }, character(1))
+      strata_flat_dimension_names(name, dims)
     },
 
     reconstruct_parameters = function(all) {

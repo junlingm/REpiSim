@@ -80,11 +80,11 @@ test_that("Calibrator accepts flat stratified parameter component names", {
 
   result <- fit$calibrate(
     initial.values = c(S_A = 0.5, S_K = 0.5, I_A = 1e-4, I_K = 1e-4),
-    parms = list(beta_A_A = 1.5, beta_K_K = 2, gamma_A = 0.2, gamma_K = 0.2),
+    parms = list(beta_A_A = 1.5, beta_K_K = 2, gamma = 0.2),
     guess = c(beta_K_A = 1.6, beta_A_K = 1.7)
   )
 
   expect_named(result$guess, c("beta_K_A", "beta_A_K"))
-  expect_named(result$fixed, c("S_A", "S_K", "I_A", "I_K", "beta_A_A", "beta_K_K", "gamma_A", "gamma_K"))
+  expect_named(result$fixed, c("S_A", "S_K", "I_A", "I_K", "beta_A_A", "beta_K_K", "gamma"))
   expect_s3_class(result$simulated, "data.frame")
 })

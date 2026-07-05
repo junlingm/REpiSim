@@ -103,6 +103,14 @@ strata_flat_name <- function(base, values) {
   make.names(paste(c(base, as.character(values)), collapse = "_"))
 }
 
+strata_flat_dimension_names <- function(name, dims) {
+  grid <- expand.grid(dims, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+  vapply(seq_len(nrow(grid)), function(row) {
+    key <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
+    strata_flat_name(name, key)
+  }, character(1))
+}
+
 strata_collect_compartment_dimensions <- function(formulas, index_sets) {
   dimensions <- list()
 
@@ -244,15 +252,6 @@ strata_collect_parameter_dimensions_expr <- function(expr, bindings, index_sets,
                                                      compartment_dimensions, env,
                                                      dimensions) {
   if (is.name(expr)) {
-    name <- as.character(expr)
-    if (is.null(bindings[[name]]) && is.null(compartment_dimensions[[name]]) &&
-        length(bindings) == 1) {
-      old <- dimensions[[name]]
-      dims <- list(bindings[[1]])
-      if (!is.null(old) && !identical(old, dims))
-        stop("conflicting dimensions for parameter ", name)
-      dimensions[[name]] <- dims
-    }
     return(dimensions)
   }
 
@@ -309,6 +308,7 @@ strata_collect_parameter_dimensions_expr <- function(expr, bindings, index_sets,
 }
 
 strata_expand_model_formula <- function(formula, index_sets, compartment_dimensions, env,
+                                        parameter_dimensions = list(),
                                         index_mode = c("name", "position")) {
   index_mode <- match.arg(index_mode)
   if (!is.call(formula) || !identical(formula[[1]], as.name("~")))
@@ -318,7 +318,9 @@ strata_expand_model_formula <- function(formula, index_sets, compartment_dimensi
   rhs <- formula[[3]]
 
   if (!strata_is_indexed_call(lhs)) {
-    return(list(call("~", lhs, strata_expand_expr(rhs, list(), index_sets, compartment_dimensions, env, index_mode))))
+    return(list(call("~", lhs, strata_expand_expr(
+      rhs, list(), index_sets, compartment_dimensions, env, parameter_dimensions, index_mode
+    ))))
   }
 
   base <- as.character(lhs[[2]])
@@ -347,6 +349,7 @@ strata_expand_model_formula <- function(formula, index_sets, compartment_dimensi
         index_sets,
         compartment_dimensions,
         env,
+        parameter_dimensions,
         index_mode,
         current_position
       )
@@ -355,6 +358,7 @@ strata_expand_model_formula <- function(formula, index_sets, compartment_dimensi
 }
 
 strata_expand_transition_formula <- function(formula, index_sets, compartment_dimensions, env,
+                                             parameter_dimensions = list(),
                                              index_mode = c("name", "position")) {
   index_mode <- match.arg(index_mode)
 
@@ -374,7 +378,10 @@ strata_expand_transition_formula <- function(formula, index_sets, compartment_di
 
   if (length(endpoint_indices) == 0)
     return(list(list(
-      formula = strata_expand_expr(formula, list(), index_sets, compartment_dimensions, env, index_mode),
+      formula = strata_expand_expr(
+        formula, list(), index_sets, compartment_dimensions, env,
+        parameter_dimensions, index_mode
+      ),
       suffix = NULL
     )))
 
@@ -390,13 +397,16 @@ strata_expand_transition_formula <- function(formula, index_sets, compartment_di
     current_position <- if (length(positions) == 1) positions[[1]] else NULL
     bindings <- strata_make_bindings(index_names, unname(values), positions)
     expanded_to <- if (is.null(pieces$to)) NULL else strata_expand_expr(
-      pieces$to, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+      pieces$to, bindings, index_sets, compartment_dimensions, env,
+      parameter_dimensions, index_mode, current_position
     )
     expanded_from <- if (is.null(pieces$from)) NULL else strata_expand_expr(
-      pieces$from, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+      pieces$from, bindings, index_sets, compartment_dimensions, env,
+      parameter_dimensions, index_mode, current_position
     )
     expanded_rate <- if (is.null(pieces$rate)) NULL else strata_expand_expr(
-      pieces$rate, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+      pieces$rate, bindings, index_sets, compartment_dimensions, env,
+      parameter_dimensions, index_mode, current_position
     )
 
     list(
@@ -407,6 +417,7 @@ strata_expand_transition_formula <- function(formula, index_sets, compartment_di
 }
 
 strata_expand_expr <- function(expr, bindings, index_sets, compartment_dimensions, env,
+                               parameter_dimensions = list(),
                                index_mode = c("name", "position"),
                                current_position = NULL) {
   index_mode <- match.arg(index_mode)
@@ -415,8 +426,9 @@ strata_expand_expr <- function(expr, bindings, index_sets, compartment_dimension
     if (!is.null(bindings[[name]]))
       stop("bare index symbol '", name, "' is not allowed outside indexed expressions")
     if (index_mode == "position" && !is.null(current_position) &&
-        is.null(compartment_dimensions[[name]])) {
-      return(strata_position_or_scalar_call(expr, current_position))
+        !is.null(parameter_dimensions[[name]]) && length(parameter_dimensions[[name]]) == 1) {
+      values <- parameter_dimensions[[name]][[1]]
+      return(as.name(strata_flat_name(name, values[[current_position]])))
     }
     return(expr)
   }
@@ -425,9 +437,15 @@ strata_expand_expr <- function(expr, bindings, index_sets, compartment_dimension
 
   fn <- as.character(expr[[1]])
   if (fn %in% c("Sum", "sum") && strata_has_index_bindings(expr))
-    return(strata_expand_reduction(expr, "+", bindings, index_sets, compartment_dimensions, env, index_mode, current_position))
+    return(strata_expand_reduction(
+      expr, "+", bindings, index_sets, compartment_dimensions, env,
+      parameter_dimensions, index_mode, current_position
+    ))
   if (fn %in% c("Prod", "prod") && strata_has_index_bindings(expr))
-    return(strata_expand_reduction(expr, "*", bindings, index_sets, compartment_dimensions, env, index_mode, current_position))
+    return(strata_expand_reduction(
+      expr, "*", bindings, index_sets, compartment_dimensions, env,
+      parameter_dimensions, index_mode, current_position
+    ))
 
   if (strata_is_indexed_call(expr)) {
     base <- as.character(expr[[2]])
@@ -439,7 +457,7 @@ strata_expand_expr <- function(expr, bindings, index_sets, compartment_dimension
         if (is.null(binding)) stop("unbound index: ", index_name)
         if (index_mode == "position") binding$position else binding$value
       } else {
-        strata_expand_expr(index, bindings, index_sets, compartment_dimensions, env, index_mode, current_position)
+        strata_expand_expr(index, bindings, index_sets, compartment_dimensions, env, parameter_dimensions, index_mode, current_position)
       }
     })
 
@@ -455,12 +473,30 @@ strata_expand_expr <- function(expr, bindings, index_sets, compartment_dimension
       return(as.name(strata_flat_name(base, unlist(flat_values, use.names = FALSE))))
     }
 
+    if (!is.null(parameter_dimensions[[base]])) {
+      if (length(values) != length(parameter_dimensions[[base]]))
+        stop("wrong number of indices for parameter ", base)
+      flat_values <- lapply(indices, function(index) {
+        if (is.name(index)) {
+          binding <- bindings[[as.character(index)]]
+          if (is.null(binding)) stop("unbound index: ", as.character(index))
+          return(binding$value)
+        }
+
+        value <- strata_expand_expr(index, bindings, index_sets, compartment_dimensions, env, parameter_dimensions, "name", current_position)
+        if (!is.character(value) && !is.numeric(value))
+          stop("parameter indices must be symbols or scalar values")
+        as.character(value)
+      })
+      return(as.name(strata_flat_name(base, unlist(flat_values, use.names = FALSE))))
+    }
+
     return(as.call(c(list(as.name("["), as.name(base)), unname(values))))
   }
 
   parts <- as.list(expr)
   for (i in seq_along(parts)[-1])
-    parts[[i]] <- strata_expand_expr(parts[[i]], bindings, index_sets, compartment_dimensions, env, index_mode, current_position)
+    parts[[i]] <- strata_expand_expr(parts[[i]], bindings, index_sets, compartment_dimensions, env, parameter_dimensions, index_mode, current_position)
   as.call(parts)
 }
 
@@ -470,6 +506,7 @@ strata_has_index_bindings <- function(expr) {
 }
 
 strata_expand_reduction <- function(expr, op, bindings, index_sets, compartment_dimensions, env,
+                                    parameter_dimensions = list(),
                                     index_mode = c("name", "position"),
                                     current_position = NULL) {
   index_mode <- match.arg(index_mode)
@@ -502,6 +539,7 @@ strata_expand_reduction <- function(expr, op, bindings, index_sets, compartment_
       index_sets,
       compartment_dimensions,
       env,
+      parameter_dimensions,
       index_mode,
       current_position
     )

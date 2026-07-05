@@ -222,6 +222,10 @@ Simulator <- R6Class(
       for (parameter in names(private$parameter_dimensions)) {
         dims <- private$parameter_dimensions[[parameter]]
         value <- parms[[parameter]]
+        if (is.null(value)) {
+          flat_names <- strata_flat_dimension_names(parameter, dims)
+          if (all(flat_names %in% names(parms))) next
+        }
         expected_rank <- length(dims)
 
         if (expected_rank == 1) {
@@ -245,6 +249,39 @@ Simulator <- R6Class(
           }
         }
       }
+    },
+
+    flatten_parameters = function(parms) {
+      if (!is.list(parms) || is.data.frame(parms)) return(parms)
+
+      np <- names(parms)
+      if (is.null(np) || any(np == ""))
+        stop("parms must be named")
+
+      out <- list()
+      for (name in np) {
+        dims <- private$parameter_dimensions[[name]]
+        value <- parms[[name]]
+
+        if (is.null(dims)) {
+          if (length(value) != 1)
+            stop("parameter ", name, " length must be 1")
+          out[[name]] <- value
+        } else {
+          flat_names <- strata_flat_dimension_names(name, dims)
+          if (length(dims) == 1 && is.null(dim(value))) {
+            values <- if (length(value) == 1) rep(value, length(dims[[1]])) else as.list(value)
+            names(values) <- flat_names
+            out <- c(out, values)
+          } else {
+            values <- as.list(as.vector(value))
+            names(values) <- flat_names
+            out <- c(out, values)
+          }
+        }
+      }
+
+      unlist(out)
     },
 
     validate_strata_names = function(parameter, dimension, actual, expected, require_names = TRUE) {
@@ -391,6 +428,10 @@ Simulator <- R6Class(
         if (is.null(np) || any(np == ""))
           stop("parms must be named")
 
+        private$validate_parameter_strata(parms)
+        parms <- private$flatten_parameters(parms)
+        np <- names(parms)
+
         parms <- parms[private$parameters]
         missing <- which(if (is.list(parms)) vapply(parms, is.null, logical(1)) else is.na(parms))
         if (length(missing) > 0)
@@ -399,8 +440,6 @@ Simulator <- R6Class(
         extra <- setdiff(np, private$parameters)
         if (length(extra) > 0)
           stop("extra parameter values for ", paste(extra, collapse = ", "))
-
-        private$validate_parameter_strata(parms)
       }
 
       data <- private$.simulate(t, y0, parms, ...)

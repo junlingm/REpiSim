@@ -436,6 +436,7 @@ Compartmental <- R6Class(
           index_sets,
           private$.compartment_dimensions,
           call_env,
+          private$.parameter_dimensions,
           index_mode = "position"
         )
 

@@ -15,8 +15,8 @@ test_that("Model keeps indexed equations and exposes flat equations", {
   flat <- model$flat_equations()$equations
   expect_named(flat, c("S_A", "S_K", "I_A", "I_K"))
   positional <- model$flat_equations(index_mode = "position")$equations
-  expect_match(deparse1(positional$S_A[[3]]), 'beta\\[1L, 1L\\]')
-  expect_match(deparse1(positional$S_A[[3]]), 'beta\\[1L, 2L\\]')
+  expect_match(deparse1(positional$S_A[[3]]), "beta_A_A")
+  expect_match(deparse1(positional$S_A[[3]]), "beta_A_K")
 
   beta <- matrix(
     c(0.4, 0.2,
@@ -94,7 +94,7 @@ test_that("ODE R backend simulates stratified models with structured parameters"
   expect_named(out, c("time", "S_A", "S_K", "I_A", "I_K"))
 
   ode_body <- deparse1(body(ODE$new(model)$model))
-  expect_match(ode_body, "beta\\[1L, 1L\\]")
+  expect_match(ode_body, "beta_A_A")
   expect_no_match(ode_body, 'beta\\["A", "A"\\]')
 })
 
@@ -132,7 +132,7 @@ test_that("positional simulator indexing validates parameter strata order", {
   )
 })
 
-test_that("ODE accepts structured initial values and vector parameters", {
+test_that("ODE accepts structured initial values and scalar parameters", {
   skip_if_not_installed("deSolve")
 
   groups <- c("A", "K")
@@ -149,7 +149,7 @@ test_that("ODE accepts structured initial values and vector parameters", {
     I = c(A = 1e-4, K = 1e-4)
   )
   beta <- matrix(c(2, 1.5, 1.5, 2), nrow = 2)
-  gamma <- c(A = 0.2, K = 0.2)
+  gamma <- 0.2
 
   out <- sim$simulate(t, y0 = y0, parms = list(beta = beta, gamma = gamma))
 
@@ -157,8 +157,8 @@ test_that("ODE accepts structured initial values and vector parameters", {
   expect_named(out, c("time", "S_A", "S_K", "I_A", "I_K"))
 
   body_text <- deparse1(body(sim$model))
-  expect_match(body_text, "gamma\\[\\[min\\(length\\(gamma\\), 1L\\)\\]\\]")
-  expect_match(body_text, "gamma\\[\\[min\\(length\\(gamma\\), 2L\\)\\]\\]")
+  expect_match(body_text, "gamma \\* I_A")
+  expect_match(body_text, "gamma \\* I_K")
 })
 
 test_that("compiled ODE reports stratification as unsupported for now", {
