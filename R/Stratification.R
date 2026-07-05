@@ -112,6 +112,88 @@ strata_collect_parameter_dimensions <- function(formulas, index_sets, compartmen
   dimensions
 }
 
+strata_collect_transition_compartment_dimensions <- function(formula, index_sets, dimensions = list()) {
+  endpoints <- strata_transition_endpoints(formula)
+
+  for (endpoint in endpoints) {
+    if (!strata_is_indexed_call(endpoint)) next
+
+    base <- as.character(endpoint[[2]])
+    indices <- as.list(endpoint)[-(1:2)]
+    dims <- lapply(indices, function(index) {
+      if (!is.name(index)) stop("compartment indices must be symbols")
+      index_name <- as.character(index)
+      values <- index_sets[[index_name]]
+      if (is.null(values)) stop("unknown index: ", index_name)
+      values
+    })
+
+    old <- dimensions[[base]]
+    if (!is.null(old) && !identical(old, dims))
+      stop("conflicting dimensions for compartment ", base)
+    dimensions[[base]] <- dims
+  }
+
+  dimensions
+}
+
+strata_collect_transition_parameter_dimensions <- function(formula, index_sets,
+                                                           compartment_dimensions,
+                                                           env,
+                                                           dimensions = list()) {
+  pieces <- strata_parse_transition_formula(formula)
+  bindings <- list()
+
+  for (endpoint in list(pieces$to, pieces$from)) {
+    if (!strata_is_indexed_call(endpoint)) next
+
+    base <- as.character(endpoint[[2]])
+    indices <- vapply(as.list(endpoint)[-(1:2)], function(index) {
+      if (!is.name(index)) stop("compartment indices must be symbols")
+      as.character(index)
+    }, character(1))
+    dims <- compartment_dimensions[[base]]
+    for (i in seq_along(indices))
+      bindings[[indices[[i]]]] <- dims[[i]]
+  }
+
+  strata_collect_parameter_dimensions_expr(
+    pieces$rate, bindings, index_sets, compartment_dimensions, env, dimensions
+  )
+}
+
+strata_transition_endpoints <- function(formula) {
+  pieces <- strata_parse_transition_formula(formula)
+  Filter(Negate(is.null), list(pieces$to, pieces$from))
+}
+
+strata_parse_transition_formula <- function(formula) {
+  if (!is.call(formula) || !identical(formula[[1]], as.name("<-")))
+    stop("invalid transition")
+
+  to <- strata_parse_transition_side(formula[[2]])
+  from <- strata_parse_transition_side(formula[[3]])
+
+  rate <- NULL
+  if (!is.null(to$rate)) rate <- to$rate
+  if (!is.null(from$rate)) {
+    if (!is.null(rate)) stop("invalid transition: rate specified twice")
+    rate <- from$rate
+  }
+
+  list(to = to$compartment, from = from$compartment, rate = rate)
+}
+
+strata_parse_transition_side <- function(side) {
+  if (is.null(side)) return(list(compartment = NULL, rate = NULL))
+  if (is.name(side) && identical(as.character(side), "NULL"))
+    return(list(compartment = NULL, rate = NULL))
+  if (is.call(side) && identical(side[[1]], as.name("~"))) {
+    return(list(compartment = side[[2]], rate = side[[3]]))
+  }
+  list(compartment = side, rate = NULL)
+}
+
 strata_collect_parameter_dimensions_expr <- function(expr, bindings, index_sets,
                                                      compartment_dimensions, env,
                                                      dimensions) {
@@ -222,6 +304,58 @@ strata_expand_model_formula <- function(formula, index_sets, compartment_dimensi
         index_mode,
         current_position
       )
+    )
+  })
+}
+
+strata_expand_transition_formula <- function(formula, index_sets, compartment_dimensions, env,
+                                             index_mode = c("name", "position")) {
+  index_mode <- match.arg(index_mode)
+
+  if (length(index_sets) == 0)
+    return(list(list(formula = formula, suffix = NULL)))
+
+  pieces <- strata_parse_transition_formula(formula)
+  endpoint_indices <- list()
+  for (endpoint in list(pieces$to, pieces$from)) {
+    if (!strata_is_indexed_call(endpoint)) next
+    indices <- vapply(as.list(endpoint)[-(1:2)], function(index) {
+      if (!is.name(index)) stop("compartment indices must be symbols")
+      as.character(index)
+    }, character(1))
+    for (index in indices) endpoint_indices[[index]] <- index_sets[[index]]
+  }
+
+  if (length(endpoint_indices) == 0)
+    return(list(list(
+      formula = strata_expand_expr(formula, list(), index_sets, compartment_dimensions, env, index_mode),
+      suffix = NULL
+    )))
+
+  index_names <- names(endpoint_indices)
+  dims <- unname(endpoint_indices)
+  grid <- expand.grid(dims, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+
+  lapply(seq_len(nrow(grid)), function(row) {
+    values <- as.character(unlist(grid[row, , drop = TRUE], use.names = FALSE))
+    positions <- vapply(seq_along(dims), function(i) match(values[[i]], dims[[i]]), integer(1))
+    names(values) <- index_names
+    suffix <- paste(values, collapse = "_")
+    current_position <- if (length(positions) == 1) positions[[1]] else NULL
+    bindings <- strata_make_bindings(index_names, unname(values), positions)
+    expanded_to <- if (is.null(pieces$to)) NULL else strata_expand_expr(
+      pieces$to, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+    )
+    expanded_from <- if (is.null(pieces$from)) NULL else strata_expand_expr(
+      pieces$from, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+    )
+    expanded_rate <- if (is.null(pieces$rate)) NULL else strata_expand_expr(
+      pieces$rate, bindings, index_sets, compartment_dimensions, env, index_mode, current_position
+    )
+
+    list(
+      formula = call("<-", expanded_to, call("~", expanded_from, expanded_rate)),
+      suffix = suffix
     )
   })
 }

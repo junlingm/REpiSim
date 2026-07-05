@@ -46,22 +46,22 @@
 Compartmental <- R6Class(
   "Compartmental",
   inherit = Model,
-  
+
   private = list(
     # --------------------------------------------------------------------------
     # Internal storage
     # --------------------------------------------------------------------------
-    
+
     # Named list of transitions. Each transition record is a list with fields:
     #   - from: character or NULL
     #   - to  : character or NULL
     #   - name: character (unique key)
     .transitions = list(),
-    
+
     # --------------------------------------------------------------------------
     # Internal helpers
     # --------------------------------------------------------------------------
-    
+
     # (Re)formulate the ODE for a compartment by aggregating transition rates.
     #
     # For each transition:
@@ -86,7 +86,7 @@ Compartmental <- R6Class(
       )
       super$compartment(call("~", as.name(compartment), rate))
     },
-    
+
     # Parse the "side" of a transition formula, allowing an optional rate.
     #
     # Expected forms:
@@ -100,11 +100,11 @@ Compartmental <- R6Class(
     parse.rate = function(e) {
       if (is.null(e)) return(NULL)
       if (!is.call(e)) return(e)
-      
+
       if (e[[1]] != "~") stop("invalid transition")
       list(compartment = e[[2]], rate = Expression$new(e[[3]]))
     },
-    
+
     # Generate a unique name for an unnamed transition.
     transition.name = function(from, to) {
       base = paste0(from, "->", to)
@@ -116,7 +116,7 @@ Compartmental <- R6Class(
       }
       name
     },
-    
+
     # Override rename to support renaming transitions as well as model symbols.
     #
     # - If `from` matches a transition name, rename that transition.
@@ -126,14 +126,165 @@ Compartmental <- R6Class(
         private$.transitions[[to]] = private$.transitions[[from]]
         private$.transitions[[to]]$name = to
         private$.transitions[[from]] = NULL
-        
+
         private$.formula[[to]] = private$.formula[[from]]
         private$.formula[[from]] = NULL
       } else {
         super$do.rename(from, to)
       }
     },
-    
+
+    transition.expr = function(formula = NULL, where = list(), from = NULL, to = NULL, rate = NULL, percapita = FALSE, name = NULL) {
+      # ----------------------------------------------------------------------
+      # Parse transition specification
+      # ----------------------------------------------------------------------
+      if (!is.null(formula)) {
+        if (!is.call(formula) || formula[[1]] != "<-")
+          stop("invalid transition")
+
+        # Left side is "to" (may include a rate via "~")
+        to_parsed = private$parse.rate(formula[[2]])
+        if (is.list(to_parsed)) {
+          rate_obj = to_parsed$rate
+          to = to_parsed$compartment
+        } else {
+          rate_obj = NULL
+          to = to_parsed
+        }
+
+        # Right side is "from" (may include rate via "~" if not on left)
+        from_parsed = private$parse.rate(formula[[3]])
+        if (is.list(from_parsed)) {
+          if (!is.null(rate_obj)) stop("invalid transition: rate specified twice")
+          rate_obj = from_parsed$rate
+          from = from_parsed$compartment
+        } else {
+          from = from_parsed
+        }
+
+        if (!is.null(rate_obj)) rate = rate_obj
+      } else {
+        # If no formula, interpret `rate` argument as an expression unless NULL.
+        if (!is.null(rate) && !is(rate, "Expression"))
+          rate = Expression$new(rate)
+      }
+
+      # ----------------------------------------------------------------------
+      # Validate endpoints and normalize to character (or NULL)
+      # ----------------------------------------------------------------------
+      if (!is.null(from) && !is.character(from)) {
+        if (!is.name(from)) stop("invalid compartment ", from)
+        from = as.character(from)
+      }
+      if (!is.null(to) && !is.character(to)) {
+        if (!is.name(to)) stop("invalid compartment ", to)
+        to = as.character(to)
+      }
+
+      # independent variable name cannot be used as compartment
+      if (!is.null(from) && identical(from, private$.t))
+        stop(from, " is the independent variable, and cannot be used as a compartment")
+      if (!is.null(to) && identical(to, private$.t))
+        stop(to, " is the independent variable, and cannot be used as a compartment")
+
+      # ----------------------------------------------------------------------
+      # Interpret per-capita wrappers / flags
+      # ----------------------------------------------------------------------
+      if (is(rate, "Expression") && is.call(rate$expr) && identical(rate$expr[[1]], as.name("percapita"))) {
+        rate = Expression$new(rate$expr[[2]])
+        percapita = TRUE
+      }
+
+      if (isTRUE(percapita)) {
+        if (is.null(from)) stop("percapita=TRUE requires a non-NULL 'from' compartment")
+        # Total rate = per-capita rate * population in 'from'
+        rate$mul(as.name(from))
+      }
+
+      # ----------------------------------------------------------------------
+      # Auto-declare endpoint compartments
+      # ----------------------------------------------------------------------
+      if (!is.null(rate) && (!is.null(from) || !is.null(to))) {
+        if (!is.null(from) && is.null(private$.compartments[[from]]))
+          self$compartment(from)
+        if (!is.null(to) && is.null(private$.compartments[[to]]))
+          self$compartment(to)
+      }
+
+      # ----------------------------------------------------------------------
+      # Name handling
+      # ----------------------------------------------------------------------
+      if (is.null(name)) name = private$transition.name(from, to)
+
+      # ----------------------------------------------------------------------
+      # Create / update / delete transition
+      # ----------------------------------------------------------------------
+      tr = private$.transitions[[name]]
+
+      if (!is.null(tr)) {
+        # Existing transition: either delete or modify
+        if (is.null(rate) || (is.null(from) && is.null(to))) {
+          # Delete
+          private$define.formula(name, NULL)
+          private$.transitions[[name]] = NULL
+          name = NULL
+        } else {
+          # Modify: decide whether to auto-rename if name is based on "from->to"
+          rename.auto = grepl(paste0(from, "->", to), name) &&
+            (!identical(tr$from, from) || !identical(tr$to, to))
+
+          new.name = if (rename.auto) private$transition.name(from, to) else name
+
+          # Remove old formula and define new
+          private$define.formula(name, NULL)
+          private$define.formula(new.name, rate)
+
+          # Update record (use new.name)
+          private$.transitions[[name]] = NULL
+          private$.transitions[[new.name]] = list(from = from, to = to, name = new.name)
+
+          # Recompute equations for affected compartments (old and new endpoints)
+          if (!is.null(tr$from)) private$equation(tr$from)
+          if (!is.null(tr$to)) private$equation(tr$to)
+          if (!is.null(from)) private$equation(from)
+          if (!is.null(to)) private$equation(to)
+
+          name = new.name
+        }
+      } else {
+        # New transition
+        if (is.null(rate) || (is.null(from) && is.null(to))) {
+          # nothing to add
+          name = NULL
+        } else {
+          private$define.formula(name, rate)
+          private$.transitions[[name]] = list(from = from, to = to, name = name)
+          if (!is.null(from)) private$equation(from)
+          if (!is.null(to)) private$equation(to)
+        }
+      }
+
+      # ----------------------------------------------------------------------
+      # Local substitutions passed via ...
+      # ----------------------------------------------------------------------
+      if (length(where) > 0) {
+        ns = names(where)
+        for (i in seq_along(where)) {
+          w = where[i]
+          n = ns[i]
+          if (n == private$.t)
+            stop(n, " is the independent variable, and thus cannot be redefined")
+          if (is.null(n) || n == "")
+            stop("meaningless definition ", w)
+          if (!is.null(private$.where[[n]]))
+            stop("redefinition of ", n)
+          self$where(pairs = w)
+        }
+      }
+
+      invisible(name)
+    },
+
     # Reconstruct the model from a serialisable representation.
     #
     # NOTE: The original version had typos (`privte$`, `represnetation$`) that
@@ -142,29 +293,29 @@ Compartmental <- R6Class(
     construct = function(representation) {
       if (!identical(representation$class, "Compartmental"))
         stop("invalid model file")
-      
+
       # Independent variable name: keep as string, default to "t"
       private$.t <- if (is.null(representation$.t) || representation$.t == "") {
         "t"
       } else {
         as.character(representation$.t)
       }
-      
+
       # Compartments
       if (!is.null(representation$compartments)) {
         sapply(representation$compartments, self$compartment)
       }
-      
+
       # Transitions
       if (!is.null(representation$transitions)) {
         sapply(representation$transitions, function(tr) do.call(self$transition, tr))
       }
-      
+
       # Substitutions
       self$where(pairs = representation$substitutions)
     }
   ),
-  
+
   public = list(
     #' @description
     #' Construct a compartmental model.
@@ -181,7 +332,7 @@ Compartmental <- R6Class(
     initialize = function(..., t = "t", file = NULL) {
       super$initialize(..., t = t, file = file)
     },
-    
+
     #' @description
     #' Define a compartment (state variable) by name.
     #'
@@ -195,15 +346,15 @@ Compartmental <- R6Class(
       if (length(name) == 0) return(invisible(self))
       if (!is.name(name) && !is.character(name))
         stop("invalid compartment name: ", name)
-      
+
       name_chr = as.character(name)
       if (name_chr == private$.t)
         stop(name_chr, " is the independent variable, so cannot be used as a compartment name")
-      
+
       super$compartment(call("~", as.name(name_chr), 0))
       invisible(self)
     },
-    
+
     #' @description
     #' Delete a compartment, substitution, or transition.
     #'
@@ -228,7 +379,7 @@ Compartmental <- R6Class(
       }
       invisible(self)
     },
-    
+
     #' @description
     #' Define, modify, or delete a transition.
     #'
@@ -249,167 +400,71 @@ Compartmental <- R6Class(
     #' - Per-capita rate can be specified as `percapita(expr)` or `percapita=TRUE`.
     transition = function(formula = NULL, ..., from = NULL, to = NULL, rate = NULL, percapita = FALSE, name = NULL) {
       formula = substitute(formula)
-      
-      # ----------------------------------------------------------------------
-      # Parse transition specification
-      # ----------------------------------------------------------------------
-      if (!is.null(formula)) {
-        if (!is.call(formula) || formula[[1]] != "<-")
-          stop("invalid transition")
-        
-        # Left side is "to" (may include a rate via "~")
-        to_parsed = private$parse.rate(formula[[2]])
-        if (is.list(to_parsed)) {
-          rate_obj = to_parsed$rate
-          to = to_parsed$compartment
-        } else {
-          rate_obj = NULL
-          to = to_parsed
+      where = as.list(substitute(list(...)))[-1]
+
+      if (!is.null(formula) && length(private$.index_sets) > 0) {
+        private$.compartment_dimensions <-
+          strata_collect_transition_compartment_dimensions(
+            formula,
+            private$.index_sets,
+            private$.compartment_dimensions
+          )
+        private$.parameter_dimensions <-
+          strata_collect_transition_parameter_dimensions(
+            formula,
+            private$.index_sets,
+            private$.compartment_dimensions,
+            private$.index_env,
+            private$.parameter_dimensions
+          )
+
+        expanded <- strata_expand_transition_formula(
+          formula,
+          private$.index_sets,
+          private$.compartment_dimensions,
+          private$.index_env,
+          index_mode = "position"
+        )
+
+        out <- character()
+        for (i in seq_along(expanded)) {
+          expanded_name <- name
+          if (!is.null(name) && !is.null(expanded[[i]]$suffix))
+            expanded_name <- paste0(name, "_", expanded[[i]]$suffix)
+
+          out <- c(out, private$transition.expr(
+            formula = expanded[[i]]$formula,
+            where = if (i == 1) where else list(),
+            from = from,
+            to = to,
+            rate = rate,
+            percapita = percapita,
+            name = expanded_name
+          ))
         }
-        
-        # Right side is "from" (may include rate via "~" if not on left)
-        from_parsed = private$parse.rate(formula[[3]])
-        if (is.list(from_parsed)) {
-          if (!is.null(rate_obj)) stop("invalid transition: rate specified twice")
-          rate_obj = from_parsed$rate
-          from = from_parsed$compartment
-        } else {
-          from = from_parsed
-        }
-        
-        if (!is.null(rate_obj)) rate = rate_obj
-      } else {
-        # If no formula, interpret `rate` argument as an expression unless NULL.
-        if (!is.null(rate) && !is(rate, "Expression"))
-          rate = Expression$new(substitute(rate))
-      }
-      
-      # ----------------------------------------------------------------------
-      # Validate endpoints and normalize to character (or NULL)
-      # ----------------------------------------------------------------------
-      if (!is.null(from) && !is.character(from)) {
-        if (!is.name(from)) stop("invalid compartment ", from)
-        from = as.character(from)
-      }
-      if (!is.null(to) && !is.character(to)) {
-        if (!is.name(to)) stop("invalid compartment ", to)
-        to = as.character(to)
-      }
-      
-      # independent variable name cannot be used as compartment
-      if (!is.null(from) && identical(from, private$.t))
-        stop(from, " is the independent variable, and cannot be used as a compartment")
-      if (!is.null(to) && identical(to, private$.t))
-        stop(to, " is the independent variable, and cannot be used as a compartment")
-      
-      # ----------------------------------------------------------------------
-      # Interpret per-capita wrappers / flags
-      # ----------------------------------------------------------------------
-      if (is(rate, "Expression") && is.call(rate$expr) && identical(rate$expr[[1]], as.name("percapita"))) {
-        rate = Expression$new(rate$expr[[2]])
-        percapita = TRUE
-      }
-      
-      if (isTRUE(percapita)) {
-        if (is.null(from)) stop("percapita=TRUE requires a non-NULL 'from' compartment")
-        # Total rate = per-capita rate * population in 'from'
-        rate$mul(as.name(from))
+        return(invisible(out))
       }
 
-      # ----------------------------------------------------------------------
-      # Auto-declare endpoint compartments
-      # ----------------------------------------------------------------------
-      if (!is.null(rate) && (!is.null(from) || !is.null(to))) {
-        if (!is.null(from) && is.null(private$.compartments[[from]]))
-          self$compartment(from)
-        if (!is.null(to) && is.null(private$.compartments[[to]]))
-          self$compartment(to)
-      }
-      
-      # ----------------------------------------------------------------------
-      # Name handling
-      # ----------------------------------------------------------------------
-      if (is.null(name)) name = private$transition.name(from, to)
-      
-      # ----------------------------------------------------------------------
-      # Create / update / delete transition
-      # ----------------------------------------------------------------------
-      tr = private$.transitions[[name]]
-      
-      if (!is.null(tr)) {
-        # Existing transition: either delete or modify
-        if (is.null(rate) || (is.null(from) && is.null(to))) {
-          # Delete
-          private$define.formula(name, NULL)
-          private$.transitions[[name]] = NULL
-          name = NULL
-        } else {
-          # Modify: decide whether to auto-rename if name is based on "from->to"
-          rename.auto = grepl(paste0(from, "->", to), name) &&
-            (!identical(tr$from, from) || !identical(tr$to, to))
-          
-          new.name = if (rename.auto) private$transition.name(from, to) else name
-          
-          # Remove old formula and define new
-          private$define.formula(name, NULL)
-          private$define.formula(new.name, rate)
-          
-          # Update record (use new.name)
-          private$.transitions[[name]] = NULL
-          private$.transitions[[new.name]] = list(from = from, to = to, name = new.name)
-          
-          # Recompute equations for affected compartments (old and new endpoints)
-          if (!is.null(tr$from)) private$equation(tr$from)
-          if (!is.null(tr$to)) private$equation(tr$to)
-          if (!is.null(from)) private$equation(from)
-          if (!is.null(to)) private$equation(to)
-          
-          name = new.name
-        }
-      } else {
-        # New transition
-        if (is.null(rate) || (is.null(from) && is.null(to))) {
-          # nothing to add
-          name = NULL
-        } else {
-          private$define.formula(name, rate)
-          private$.transitions[[name]] = list(from = from, to = to, name = name)
-          if (!is.null(from)) private$equation(from)
-          if (!is.null(to)) private$equation(to)
-        }
-      }
-      
-      # ----------------------------------------------------------------------
-      # Local substitutions passed via ...
-      # ----------------------------------------------------------------------
-      where = as.list(substitute(list(...)))[-1]
-      if (length(where) > 0) {
-        ns = names(where)
-        for (i in seq_along(where)) {
-          w = where[i]
-          n = ns[i]
-          if (n == private$.t)
-            stop(n, " is the independent variable, and thus cannot be redefined")
-          if (is.null(n) || n == "")
-            stop("meaningless definition ", w)
-          if (!is.null(private$.where[[n]]))
-            stop("redefinition of ", n)
-          self$where(pairs = w)
-        }
-      }
-      
-      invisible(name)
+      private$transition.expr(
+        formula = formula,
+        where = where,
+        from = from,
+        to = to,
+        rate = if (!is.null(rate) && !is(rate, "Expression")) substitute(rate) else rate,
+        percapita = percapita,
+        name = name
+      )
     },
-    
+
     #' @description
     #' Format the class for printing.
     format = function() {
       l = "Compartmental:"
-      
+
       if (length(private$.compartments) > 0) {
         l = c(l, paste0("  Compartments: ", paste(self$compartments, collapse = ", ")))
       }
-      
+
       if (length(private$.transitions) > 0) {
         l = c(l, "  transitions:")
         for (tr in private$.transitions) {
@@ -421,21 +476,21 @@ Compartmental <- R6Class(
           ))
         }
       }
-      
+
       if (length(private$.where) > 0) {
         l = c(l, "  where")
         s = self$substitutions
         for (w in names(s))
           l = c(l, paste0("    ", w, " = ", deparse(s[[w]])))
       }
-      
+
       if (length(self$parameters) > 0)
         l = c(l, paste0("  Parameters: ", paste(self$parameters, collapse = ", ")))
-      
+
       paste(l, collapse = "\n")
     }
   ),
-  
+
   active = list(
     #' @field transitions
     #' A read-only field returning the transitions, including the evaluated rate expression.
@@ -448,7 +503,7 @@ Compartmental <- R6Class(
         }
       )
     },
-    
+
     #' @field representation
     #' A read-only field returning a serialisable representation of the model.
     #'
