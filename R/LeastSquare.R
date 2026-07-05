@@ -26,7 +26,7 @@ LeastSquare <- R6::R6Class(
     
     .calibrate = function(guess, formula, fixed, control=NULL, ...) {
       args = list(...)
-      if (!is.null(control) && args$method == "Nelder-Mead") {
+      if (!is.null(control) && !is.null(args$method) && args$method == "Nelder-Mead") {
         control$trace = 1
         control$parscale=guess/10
       }
