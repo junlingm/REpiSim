@@ -302,12 +302,6 @@ Compartmental <- R6Class(
       if (!is.null(to) && identical(to, private$.t))
         stop(to, " is the independent variable, and cannot be used as a compartment")
       
-      # compartments must exist if non-NULL
-      if (!is.null(from) && is.null(private$.compartments[[from]]))
-        stop("the compartment ", from, " is not defined")
-      if (!is.null(to) && is.null(private$.compartments[[to]]))
-        stop("the compartment ", to, " is not defined")
-      
       # ----------------------------------------------------------------------
       # Interpret per-capita wrappers / flags
       # ----------------------------------------------------------------------
@@ -320,6 +314,16 @@ Compartmental <- R6Class(
         if (is.null(from)) stop("percapita=TRUE requires a non-NULL 'from' compartment")
         # Total rate = per-capita rate * population in 'from'
         rate$mul(as.name(from))
+      }
+
+      # ----------------------------------------------------------------------
+      # Auto-declare endpoint compartments
+      # ----------------------------------------------------------------------
+      if (!is.null(rate) && (!is.null(from) || !is.null(to))) {
+        if (!is.null(from) && is.null(private$.compartments[[from]]))
+          self$compartment(from)
+        if (!is.null(to) && is.null(private$.compartments[[to]]))
+          self$compartment(to)
       }
       
       # ----------------------------------------------------------------------
