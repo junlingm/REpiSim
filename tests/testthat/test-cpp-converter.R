@@ -5,10 +5,11 @@ test_that("CppConverter translates arithmetic and indexing expressions", {
     alias = list()
   )
 
-  expect_equal(cpp$expr(quote(beta * S^2 / (S + I))), "beta * pow(S, 2) / (S + I)")
-  expect_equal(cpp$expr(quote(exp(beta) * sqrt(S))), "exp(beta) * sqrt(S)")
-  expect_equal(cpp$expr(quote(abs(-S) + round(beta))), "fabs(-S) + round(beta)")
-  expect_equal(cpp$expr(quote(S > 0 & I <= 1)), "S > 0 && I <= 1")
+  expect_equal(cpp$expr(quote(beta * S^2 / (S + I))), "((beta * pow(S, 2)) / ((S + I)))")
+  expect_equal(cpp$expr(quote(exp(beta) * sqrt(S))), "(exp(beta) * sqrt(S))")
+  expect_equal(cpp$expr(quote(abs(-S) + round(beta))), "(fabs((-S)) + round(beta))")
+  expect_equal(cpp$expr(quote(S > 0 & I <= 1)), "((S > 0) && (I <= 1))")
+  expect_equal(cpp$expr(quote(-((a + b) * S))), "(-((((a + b)) * S)))")
   expect_equal(cpp$expr(quote(x[[i]])), "x[i]")
   expect_equal(cpp$expr(quote(x[[i]][[j]])), "x[i][j]")
 })
@@ -25,9 +26,9 @@ test_that("CppConverter translates common scalar math helpers", {
   expect_equal(cpp$expr(quote(max(S, I, beta))), "fmax(fmax(S, I), beta)")
   expect_equal(cpp$expr(quote(sum(S, I, beta))), "(S + I + beta)")
   expect_equal(cpp$expr(quote(prod(S, I, beta))), "(S * I * beta)")
-  expect_equal(cpp$expr(quote(all(is.finite(S), I > 0))), "(std::isfinite(S) && I > 0)")
+  expect_equal(cpp$expr(quote(all(is.finite(S), I > 0))), "(std::isfinite(S) && (I > 0))")
   expect_equal(cpp$expr(quote(any(is.nan(S), is.infinite(I)))), "(std::isnan(S) || std::isinf(I))")
-  expect_equal(cpp$expr(quote(ifelse(S > 0, S, 0))), "((S > 0) ? (S) : (0))")
+  expect_equal(cpp$expr(quote(ifelse(S > 0, S, 0))), "(((S > 0)) ? (S) : (0))")
 })
 
 test_that("CppConverter errors clearly for non-scalar whitelisted helpers", {
@@ -56,6 +57,6 @@ test_that("CppConverter emits model context bindings in order", {
   )
   expect_equal(
     cpp$substitutions(),
-    list(N = "double N = S + I;", incidence = "double incidence = beta * S * I / N;")
+    list(N = "double N = (S + I);", incidence = "double incidence = (((beta * S) * I) / N);")
   )
 })

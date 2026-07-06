@@ -69,25 +69,25 @@ CppConverter <- R6Class(
         switch(
           op,
           `+` = if (length(C) == 2) self$expr(C[[2]]) else
-            paste0(self$expr(C[[2]]), " + ", self$expr(C[[3]])),
+            paste0("(", self$expr(C[[2]]), " + ", self$expr(C[[3]]), ")"),
           `-` = if (length(C) == 2) {
-            paste0("-", self$expr(C[[2]]))
+            paste0("(-", self$expr(C[[2]]), ")")
           } else {
-            paste0(self$expr(C[[2]]), " - ", self$expr(C[[3]]))
+            paste0("(", self$expr(C[[2]]), " - ", self$expr(C[[3]]), ")")
           },
-          `*` = paste0(self$expr(C[[2]]), " * ", self$expr(C[[3]])),
-          `/` = paste0(self$expr(C[[2]]), " / ", self$expr(C[[3]])),
-          `>` = paste0(self$expr(C[[2]]), " > ", self$expr(C[[3]])),
-          `<` = paste0(self$expr(C[[2]]), " < ", self$expr(C[[3]])),
-          `>=` = paste0(self$expr(C[[2]]), " >= ", self$expr(C[[3]])),
-          `<=` = paste0(self$expr(C[[2]]), " <= ", self$expr(C[[3]])),
-          `==` = paste0(self$expr(C[[2]]), " == ", self$expr(C[[3]])),
-          `!=` = paste0(self$expr(C[[2]]), " != ", self$expr(C[[3]])),
-          `!` = paste0("!", self$expr(C[[2]])),
-          `&` = paste0(self$expr(C[[2]]), " && ", self$expr(C[[3]])),
-          `&&` = paste0(self$expr(C[[2]]), " && ", self$expr(C[[3]])),
-          `|` = paste0(self$expr(C[[2]]), " || ", self$expr(C[[3]])),
-          `||` = paste0(self$expr(C[[2]]), " || ", self$expr(C[[3]])),
+          `*` = paste0("(", self$expr(C[[2]]), " * ", self$expr(C[[3]]), ")"),
+          `/` = paste0("(", self$expr(C[[2]]), " / ", self$expr(C[[3]]), ")"),
+          `>` = paste0("(", self$expr(C[[2]]), " > ", self$expr(C[[3]]), ")"),
+          `<` = paste0("(", self$expr(C[[2]]), " < ", self$expr(C[[3]]), ")"),
+          `>=` = paste0("(", self$expr(C[[2]]), " >= ", self$expr(C[[3]]), ")"),
+          `<=` = paste0("(", self$expr(C[[2]]), " <= ", self$expr(C[[3]]), ")"),
+          `==` = paste0("(", self$expr(C[[2]]), " == ", self$expr(C[[3]]), ")"),
+          `!=` = paste0("(", self$expr(C[[2]]), " != ", self$expr(C[[3]]), ")"),
+          `!` = paste0("(!", self$expr(C[[2]]), ")"),
+          `&` = paste0("(", self$expr(C[[2]]), " && ", self$expr(C[[3]]), ")"),
+          `&&` = paste0("(", self$expr(C[[2]]), " && ", self$expr(C[[3]]), ")"),
+          `|` = paste0("(", self$expr(C[[2]]), " || ", self$expr(C[[3]]), ")"),
+          `||` = paste0("(", self$expr(C[[2]]), " || ", self$expr(C[[3]]), ")"),
           `^` = paste0(
             "pow(",
             self$expr(self$remove_bracket(C[[2]])),
